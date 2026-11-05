@@ -129,6 +129,6 @@ test('el laboratorio también prueba los casos 2 y 3', async ({ page }) => {
   await page.getByRole('button', { name: 'Hechos y escucha' }).click();
   await page.getByRole('button', { name: 'Enviar' }).click();
   await expect(page.locator('[data-memory="perspective_heard"]')).toHaveAttribute('data-on', 'true');
-  await expect(page.getByText('Gracias por preguntar')).toBeVisible();
+  await expect(page.getByText('Gracias por querer escucharme')).toBeVisible();
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/8-laboratorio-caso3.png`, fullPage: true });
 });
