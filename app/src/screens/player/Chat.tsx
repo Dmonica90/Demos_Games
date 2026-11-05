@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { FormEvent, KeyboardEvent } from 'react';
 import { useSound } from '../../audio/SoundProvider';
 import type { CaseDef } from '../../cases/types';
-import { Avatar, COLOR_LABEL, COLOR_TEXT, ScoreBar } from '../../components/game';
+import { COLOR_BG, COLOR_LABEL, ScoreBar } from '../../components/game';
 import type { Conversation } from '../../engine/conversation';
 import { reply, timeUp } from '../../engine/conversation';
 import { formatClock, remainingMs, useNow } from '../../hooks';
@@ -72,31 +72,40 @@ export function Chat({
 
   return (
     <main className="mx-auto flex h-dvh max-w-2xl flex-col">
-      <header className="border-b border-edge bg-panel px-4 pt-3 pb-3">
+      <header className="hud px-4 pt-3 pb-4">
         <div className="flex items-center gap-3">
-          <Avatar initials={def.partner.initials} className="h-10 w-10 text-sm" />
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white text-sm font-bold text-accent-deep" aria-hidden="true">
+            {def.partner.initials}
+          </span>
           <div className="min-w-0 flex-1">
-            <p className="truncate font-semibold">{def.partner.name}</p>
-            <p className="truncate text-xs text-ink-dim">
-              {typing ? 'escribiendo…' : def.partner.role}
-            </p>
+            <p className="truncate font-bold">{def.partner.name}</p>
+            <p className="truncate text-xs text-white/85">{typing ? 'escribiendo…' : def.partner.role}</p>
           </div>
-          <div className="text-right">
-            <p className={`font-mono text-lg font-bold tabular-nums ${left < 60_000 ? 'text-alarm' : ''}`}>
+          <div className="flex flex-col items-end gap-1">
+            <span
+              className={`rounded-full px-3 py-0.5 text-lg font-extrabold tabular-nums ${
+                left < 60_000 ? 'bg-white text-alarm-ink' : 'bg-white/20'
+              }`}
+            >
               {formatClock(left)}
-            </p>
-            <p className="text-xs text-ink-dim">
+            </span>
+            <span className="text-xs font-semibold text-white/85">
               mensaje {Math.min(convo.turn + 1, def.maxTurns)}/{def.maxTurns}
-            </p>
+            </span>
           </div>
         </div>
         <div className="mt-3 flex items-center gap-3">
-          <ScoreBar points={convo.points} color={convo.color} />
-          <span data-testid="my-points" className="font-mono text-sm font-semibold tabular-nums">
+          <ScoreBar points={convo.points} color={convo.color} onBrand />
+          <span key={convo.points} data-testid="my-points" className="bump text-lg font-extrabold tabular-nums">
             {convo.points}
           </span>
         </div>
-        <p data-testid="my-color" data-color={convo.color} className={`mt-1 text-xs font-medium ${COLOR_TEXT[convo.color]}`}>
+        <p
+          data-testid="my-color"
+          data-color={convo.color}
+          className="mt-2 inline-flex items-center gap-2 rounded-full bg-white px-3 py-0.5 text-xs font-bold text-ink"
+        >
+          <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${COLOR_BG[convo.color]}`} />
           {COLOR_LABEL[convo.color]}
         </p>
       </header>
@@ -106,12 +115,12 @@ export function Chat({
           type="button"
           onClick={() => setContextOpen((v) => !v)}
           aria-expanded={contextOpen}
-          className="mx-auto mb-4 block rounded-full bg-panel-2 px-4 py-1.5 text-xs text-ink-dim"
+          className="mx-auto mb-4 block rounded-full border-2 border-edge bg-panel px-4 py-1.5 text-xs font-semibold text-ink-dim"
         >
           {contextOpen ? 'Ocultar contexto' : `Caso ${def.number}: ${def.title} · ver contexto`}
         </button>
         {contextOpen && (
-          <div className="panel mb-4 rounded-2xl p-4 text-sm">
+          <div className="card mb-4 p-5 text-sm">
             <p>{def.context}</p>
             <p className="mt-2">
               <strong>Objetivo:</strong> {def.goal}
@@ -135,7 +144,7 @@ export function Chat({
         <div ref={bottom} />
       </div>
 
-      <form onSubmit={send} className="flex items-end gap-2 border-t border-edge bg-panel p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <form onSubmit={send} className="flex items-end gap-2 border-t border-edge-soft bg-panel p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_-16px_rgb(15_23_42/0.25)]">
         <label htmlFor="message" className="sr-only">
           Tu respuesta
         </label>
@@ -147,12 +156,12 @@ export function Chat({
           onChange={(e) => setText(e.target.value)}
           onKeyDown={onKeyDown}
           placeholder={`Escribe tu respuesta a ${def.partner.name}…`}
-          className="max-h-40 min-h-12 flex-1 resize-none rounded-2xl border border-edge bg-ground px-4 py-3 outline-none focus:border-accent"
+          className="max-h-40 min-h-12 flex-1 resize-none rounded-2xl border-2 border-edge bg-panel-2 px-4 py-3 text-ink outline-none transition-colors focus:border-accent"
         />
         <button
           type="submit"
           disabled={!text.trim() || typing}
-          className="grid h-12 min-w-12 place-items-center rounded-full bg-accent px-4 font-semibold text-white disabled:opacity-40"
+          className="bg-brand grid h-12 min-w-12 place-items-center rounded-full px-5 font-bold text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-brand disabled:translate-y-0 disabled:bg-none disabled:bg-[#cbd5e1] disabled:text-[#475569] disabled:shadow-none"
         >
           Enviar
         </button>

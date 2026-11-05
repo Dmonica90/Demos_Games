@@ -27,9 +27,9 @@ export function Notice({ title, body }: { title: string; body?: string }) {
     <main className="grid min-h-dvh place-items-center px-4 text-center">
       <div>
         <Brand />
-        <h1 className="mt-3 text-2xl font-bold">{title}</h1>
+        <h1 className="mt-3 text-2xl">{title}</h1>
         {body && <p className="mt-2 text-ink-dim">{body}</p>}
-        <a href="#/" className="mt-6 inline-block text-accent underline">
+        <a href="#/" className="mt-6 inline-block font-semibold text-accent-deep underline">
           Volver al inicio
         </a>
       </div>

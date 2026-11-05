@@ -28,11 +28,13 @@ export function HostHome() {
   };
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-6xl flex-col px-4 py-10 sm:px-8">
+    <main className="screen-in mx-auto flex min-h-dvh max-w-6xl flex-col px-4 py-10 sm:px-8 sm:py-14">
       <header className="mb-8">
         <Brand />
-        <h1 className="mt-2 text-3xl font-bold sm:text-4xl">Crea una sesión</h1>
-        <p className="mt-2 max-w-2xl text-ink-dim">
+        <h1 className="mt-3 text-4xl leading-tight sm:text-5xl">
+          Comunica mejor, <span className="text-brand">por escrito.</span>
+        </h1>
+        <p className="mt-3 max-w-2xl text-lg">
           Elige un caso. Todas las personas recibirán el mismo mensaje inicial, al mismo tiempo y con las mismas reglas.
           Después proyecta el código QR para que se unan desde su celular.
         </p>
@@ -46,8 +48,8 @@ export function HostHome() {
             return (
               <StaggerItem key={c.id}>
                 <label
-                  className={`panel flex h-full cursor-pointer flex-col rounded-2xl p-5 transition ${
-                    active ? 'ring-2 ring-accent' : 'hover:border-accent/50'
+                  className={`card flex h-full cursor-pointer flex-col p-6 transition-all duration-200 sm:p-8 ${
+                    active ? 'shadow-brand outline-2 outline-accent' : 'hover:-translate-y-0.5'
                   }`}
                 >
                   <input
@@ -58,16 +60,28 @@ export function HostHome() {
                     onChange={() => setSelected(c.id)}
                     className="sr-only"
                   />
-                  <span className="text-xs font-semibold text-accent uppercase">Caso {c.number}</span>
-                  <span className="mt-1 text-xl font-bold">{c.title}</span>
-                  <span className="mt-1 text-sm text-ink-dim">{c.relation}</span>
+                  <span className="flex items-center justify-between">
+                    <span className="grid h-10 w-10 place-items-center rounded-full bg-brand text-sm font-bold text-white">
+                      {String(c.number).padStart(2, '0')}
+                    </span>
+                    <span
+                      aria-hidden="true"
+                      className={`grid h-6 w-6 place-items-center rounded-full border-2 ${
+                        active ? 'border-accent bg-accent text-xs text-white' : 'border-edge'
+                      }`}
+                    >
+                      {active ? '✔' : ''}
+                    </span>
+                  </span>
+                  <span className="mt-4 text-xl font-bold text-ink">{c.title}</span>
+                  <span className="eyebrow mt-1 !text-[0.68rem] !text-ink-dim">{c.relation}</span>
                   <span className="mt-4 text-sm leading-relaxed">{c.context}</span>
-                  <span className="mt-4 rounded-xl bg-panel-2 p-3 text-sm">
-                    <strong className="font-semibold">Objetivo: </strong>
+                  <span className="mt-4 rounded-2xl bg-accent-soft p-4 text-sm text-accent-deep">
+                    <strong className="font-bold">Objetivo: </strong>
                     {c.goal}
                   </span>
-                  <span className="mt-auto pt-4 text-xs text-ink-dim">
-                    {c.maxTurns} turnos · {Math.round(c.durationS / 60)} minutos
+                  <span className="mt-auto pt-5 text-xs font-semibold text-ink-dim">
+                    {c.maxTurns} mensajes · {Math.round(c.durationS / 60)} minutos
                   </span>
                 </label>
               </StaggerItem>
@@ -78,15 +92,15 @@ export function HostHome() {
 
       <div className="mt-8 flex flex-wrap items-center gap-4">
         <Button onClick={create} disabled={busy} sfx="confirm">
-          {busy ? 'Creando…' : 'Crear sesión y mostrar QR'}
+          {busy ? 'Creando…' : 'Crear sesión y mostrar QR 📲'}
         </Button>
         {transport.kind === 'local' && (
-          <p className="text-sm text-warn">
+          <p className="rounded-full bg-[#fefce8] px-4 py-2 text-sm font-medium text-warn-ink">
             Modo local: sin Supabase configurado, solo pueden unirse otras pestañas de este navegador.
           </p>
         )}
         {error && (
-          <p role="alert" className="text-sm text-alarm">
+          <p role="alert" className="text-sm font-medium text-alarm-ink">
             No se pudo crear la sesión: {error}
           </p>
         )}

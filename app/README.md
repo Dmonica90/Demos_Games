@@ -85,6 +85,14 @@ del interlocutor están predefinidas. Para afinar cómo se detecta algo, edita
 `engine/conversation.test.ts`. Más adelante se puede sustituir `analyze()` por
 una evaluación con IA sin tocar las pantallas.
 
+### Estilo visual
+
+El look sigue el **Clip Design System** (sin logos): Poppins self-hosted en
+`src/fonts/`, naranja `#FC4C02` y el degradado de marca, tarjetas blancas de 24px
+con un riel de degradado de 2px arriba, botones píldora con degradado que se
+elevan con brillo naranja, barra superior (HUD) con degradado y paneles oscuros
+con textura de puntos para las cifras. Los tokens están en `src/index.css`.
+
 ### Editar un caso
 
 Cada archivo de `src/cases/` define: contexto, objetivo, mensaje inicial,

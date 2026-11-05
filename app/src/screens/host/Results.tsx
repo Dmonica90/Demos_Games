@@ -25,30 +25,31 @@ export function Results({ def, players }: HostProps) {
   });
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-8 sm:px-8">
+    <main className="screen-in mx-auto max-w-7xl px-4 py-10 sm:px-8">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-accent uppercase">
-            Resultados · Caso {def.number}
-          </p>
-          <h1 className="text-3xl font-bold sm:text-4xl">{def.title}</h1>
+          <p className="eyebrow">Resultados · Caso {def.number}</p>
+          <h1 className="mt-2 text-4xl sm:text-5xl">
+            {def.title.split(' ').slice(0, -1).join(' ')}{' '}
+            <span className="text-brand">{def.title.split(' ').slice(-1)}</span>
+          </h1>
         </div>
         <Button tone="ghost" onClick={() => go('/')}>
           Nueva sesión
         </Button>
       </header>
 
-      <section aria-label="Resumen" className="mt-6 grid gap-3 sm:grid-cols-4">
+      <section aria-label="Resumen" className="panel-dark mt-8 grid gap-6 rounded-3xl p-6 sm:grid-cols-4 sm:p-8">
         <Stat label="Participantes" value={ranked.length} />
         <Stat label="Lograron acuerdo" value={`${agreements}/${ranked.length}`} />
         {(['green', 'red'] as const).map((c) => (
-            <Stat key={c} label={`Terminaron en ${COLOR_SHORT[c].toLowerCase()}`} value={counts[c]} tone={COLOR_TEXT[c]} />
+            <Stat key={c} label={`Terminaron en ${COLOR_SHORT[c].toLowerCase()}`} value={counts[c]} tone={c === 'red' ? 'text-[#fca5a5]' : undefined} />
           ))}
       </section>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
         <section>
-          <h2 className="text-xl font-semibold">Ranking</h2>
+          <h2 className="text-2xl">Ranking</h2>
           <p className="text-sm text-ink-dim">
             Puntaje final = 70% barra de comunicación + 30% si logró el acuerdo. Toca a alguien para ver su conversación.
           </p>
@@ -58,18 +59,18 @@ export function Results({ def, players }: HostProps) {
                 <button
                   type="button"
                   onClick={() => setOpen(r)}
-                  className="panel grid w-full grid-cols-[2.5rem_minmax(0,1fr)_7rem_3rem] items-center gap-3 rounded-2xl px-4 py-3 text-left hover:border-accent/50"
+                  className="panel grid w-full grid-cols-[2.5rem_minmax(0,1fr)_7rem_3rem] items-center gap-3 rounded-2xl border-2 px-4 py-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-accent hover:shadow-brand-soft"
                 >
                   <span className="text-center text-xl">{MEDAL[r.place - 1] ?? r.place}</span>
                   <span className="min-w-0">
-                    <span className="block truncate font-semibold">{r.player.nickname}</span>
+                    <span className="block truncate font-bold text-ink">{r.player.nickname}</span>
                     <span className="text-xs text-ink-dim">
                       {r.convo.mission ? '✓ Acuerdo' : '✗ Sin acuerdo'} · {r.convo.turn} turnos ·{' '}
                       <span className={COLOR_TEXT[r.convo.color]}>{COLOR_SHORT[r.convo.color]}</span>
                     </span>
                   </span>
                   <ScoreBar points={r.convo.points} color={r.convo.color} size="sm" label={`Barra de ${r.player.nickname}`} />
-                  <span className="text-right font-mono text-xl font-bold">{r.score}</span>
+                  <span className="text-right text-2xl font-extrabold text-ink">{r.score}</span>
                 </button>
               </li>
             ))}
@@ -77,22 +78,25 @@ export function Results({ def, players }: HostProps) {
         </section>
 
         <div className="grid content-start gap-6">
-          <section className="panel rounded-2xl p-5">
-            <h2 className="text-lg font-semibold text-safe">Estrategias que funcionaron</h2>
+          <section className="card p-6">
+            <p className="eyebrow">01</p>
+            <h2 className="mt-1 text-xl">
+              Estrategias que <span className="text-brand">funcionaron</span>
+            </h2>
             {strengths.length === 0 ? (
               <p className="mt-2 text-sm text-ink-dim">Nadie mostró todavía una estrategia efectiva.</p>
             ) : (
               <ul className="mt-3 grid gap-3">
                 {topStrengths.map((s) => (
                   <li key={s.signal}>
-                    <p className="font-medium">
+                    <p className="font-bold text-ink">
                       {SIGNAL_LABEL[s.signal]}{' '}
                       <span className="text-sm font-normal text-ink-dim">
                         · {s.people} persona{s.people === 1 ? '' : 's'}, {s.withAgreement} con acuerdo
                       </span>
                     </p>
                     {s.example && (
-                      <blockquote className="mt-1 border-l-2 border-safe/50 pl-3 text-sm text-ink-dim italic">
+                      <blockquote className="mt-2 rounded-2xl bg-accent-soft px-4 py-3 text-sm text-accent-deep italic">
                         “{s.example.text}” — {s.example.nickname}
                       </blockquote>
                     )}
@@ -102,16 +106,19 @@ export function Results({ def, players }: HostProps) {
             )}
           </section>
 
-          <section className="panel rounded-2xl p-5">
-            <h2 className="text-lg font-semibold text-alarm">Errores frecuentes</h2>
+          <section className="card p-6">
+            <p className="eyebrow">02</p>
+            <h2 className="mt-1 text-xl">
+              Errores <span className="text-brand">frecuentes</span>
+            </h2>
             {mistakes.length === 0 ? (
               <p className="mt-2 text-sm text-ink-dim">Sin errores frecuentes. ¡Bien hecho!</p>
             ) : (
               <ul className="mt-3 grid gap-2">
                 {mistakes.slice(0, 5).map((s) => (
-                  <li key={s.signal} className="flex items-center justify-between gap-4">
-                    <span>{SIGNAL_LABEL[s.signal]}</span>
-                    <span className="text-sm text-ink-dim tabular-nums">
+                  <li key={s.signal} className="flex items-center justify-between gap-4 rounded-xl border-2 border-edge px-4 py-2">
+                    <span className="font-medium text-ink">{SIGNAL_LABEL[s.signal]}</span>
+                    <span className="text-sm font-bold text-alarm-ink tabular-nums">
                       {Math.round((s.people / Math.max(1, ranked.length)) * 100)}% del grupo
                     </span>
                   </li>
@@ -120,14 +127,17 @@ export function Results({ def, players }: HostProps) {
             )}
           </section>
 
-          <section className="panel rounded-2xl p-5">
-            <h2 className="text-lg font-semibold">Qué observar</h2>
+          <section className="card p-6">
+            <p className="eyebrow">03</p>
+            <h2 className="mt-1 text-xl">Qué observar</h2>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
               {def.observe.map((o) => (
                 <li key={o}>{o}</li>
               ))}
             </ul>
-            <h2 className="mt-5 text-lg font-semibold">Aprendizajes</h2>
+            <h2 className="mt-6 text-xl">
+              <span className="text-brand">Aprendizajes</span>
+            </h2>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
               {def.lessons.map((l) => (
                 <li key={l}>{l}</li>
@@ -140,7 +150,7 @@ export function Results({ def, players }: HostProps) {
       <Dialog open={open !== null} onClose={() => setOpen(null)} labelledBy="transcript-title">
         {open && (
           <>
-            <h2 id="transcript-title" className="text-xl font-bold">
+            <h2 id="transcript-title" className="text-2xl">
               {open.player.nickname}
             </h2>
             <p className={`text-sm ${COLOR_TEXT[open.convo.color]}`}>
@@ -163,9 +173,9 @@ export function Results({ def, players }: HostProps) {
 
 function Stat({ label, value, tone = '' }: { label: string; value: number | string; tone?: string }) {
   return (
-    <div className="panel rounded-2xl px-5 py-4">
-      <p className="text-xs text-ink-dim uppercase">{label}</p>
-      <p className={`mt-1 font-mono text-3xl font-bold ${tone}`}>{value}</p>
+    <div>
+      <p className="text-xs font-bold tracking-[0.14em] text-white/70 uppercase">{label}</p>
+      <p className={`mt-1 text-5xl font-extrabold ${tone || 'text-safe-bright'}`}>{value}</p>
     </div>
   );
 }
