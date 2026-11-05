@@ -2,6 +2,7 @@ import { useSound } from './audio/SoundProvider';
 import { useRoute } from './router';
 import { HostHome } from './screens/host/HostHome';
 import { HostSession } from './screens/host/HostSession';
+import { Lab } from './screens/Lab';
 import { Play } from './screens/player/Play';
 
 export function App() {
@@ -11,6 +12,7 @@ export function App() {
       {route.name === 'home' && <HostHome />}
       {route.name === 'host' && <HostSession key={route.code} code={route.code} />}
       {route.name === 'play' && <Play key={route.code ?? ''} code={route.code} />}
+      {route.name === 'lab' && <Lab />}
       <MuteButton />
     </>
   );

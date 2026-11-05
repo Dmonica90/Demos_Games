@@ -1,4 +1,5 @@
 import type { CaseDef } from './types';
+import { entregaConfig } from './v2/entrega.config';
 
 export const entrega: CaseDef = {
   id: 'entrega',
@@ -10,8 +11,9 @@ export const entrega: CaseDef = {
   goal: 'Comunicar el impacto del retraso, comprender qué está pasando y conseguir un compromiso concreto.',
   partner: { name: 'Daniel', role: 'Compañero de proyecto', initials: 'DA' },
   opening: 'No he podido terminar la información que me pediste. Se me juntaron otras cosas y no creo tenerla lista hoy.',
-  maxTurns: 5,
-  durationS: 480,
+  maxTurns: entregaConfig.maxTurns,
+  durationS: 360,
+  v2: entregaConfig,
   categorize: (s) => {
     if (s.has('hostile') || s.has('blame') || s.has('label') || s.has('shouting')) return 'escalate';
     if (s.has('pressure') && !s.has('empathy')) return 'escalate';
@@ -51,12 +53,14 @@ export const entrega: CaseDef = {
   ],
   relevant: [
     'empathy',
-    'context',
+    'urgency',
+    'impact',
+    'request',
+    'partial',
+    'deadline',
+    'agreement',
+    'responsibility',
     'question',
-    'proposal',
-    'concrete',
-    'commitment',
-    'assertive',
     'blame',
     'pressure',
     'hostile',

@@ -44,16 +44,15 @@ test('una sesión completa: QR, sala, conversación, dashboard y ranking', async
   await host.getByRole('button', { name: 'Iniciar actividad' }).click();
   for (const p of [ana, beto, caro]) await expect(p.getByText('No he podido terminar la información')).toBeVisible();
 
-  // Ana: clear, empathetic, assertive, closes an agreement.
+  // Ana: clear, empathetic, assertive; Daniel sums up the plan and she confirms.
   await say(
     ana,
-    'Entiendo que se te juntaron cosas, gracias por avisarme. La necesito porque el proyecto depende de esa información para entregar al cliente. ¿Qué pasó?',
+    'Entiendo que estés saturado. Para cerrar el proyecto necesito los datos de ventas. ¿Puedes enviarme lo que ya está validado hoy y completar el resto mañana a las 11?',
   );
-  await say(
-    ana,
-    'Te propongo que me mandes primero la parte de ventas y lo demás después. ¿Te parece si me la envías mañana a las 10 am?',
-  );
+  await expect(ana.getByText('Entonces quedamos así')).toBeVisible();
+  await say(ana, 'Sí, perfecto, gracias.');
   await expect(ana.getByText('¡Misión cumplida')).toBeVisible();
+  await expect(ana.getByTestId('quadrant')).toContainText('Misión resuelta eficazmente');
   if (SHOTS) await ana.screenshot({ path: `${SHOTS}/4-phone-done.png`, fullPage: true });
 
   // Beto: vague, then recovers into yellow.
@@ -88,4 +87,18 @@ test('un celular sin código puede escribirlo', async ({ page }) => {
   await page.getByLabel('Código de la sesión').fill('zzzzz');
   await page.getByRole('button', { name: 'Continuar' }).click();
   await expect(page.getByText('Código no válido')).toBeVisible();
+});
+
+test('el laboratorio muestra la memoria del motor', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/?local=1#/laboratorio');
+  await page.getByRole('button', { name: 'Empática y concreta' }).click();
+  await page.getByRole('button', { name: 'Enviar' }).click();
+  await expect(page.locator('[data-memory="impact_explained"]')).toHaveAttribute('data-on', 'true');
+  await expect(page.locator('[data-memory="deadline_defined"]')).toHaveAttribute('data-on', 'true');
+  await expect(page.locator('[data-memory="agreement_reached"]')).toHaveAttribute('data-on', 'false');
+  await page.getByLabel('Mensaje').fill('Sí, perfecto, gracias.');
+  await page.getByRole('button', { name: 'Enviar' }).click();
+  await expect(page.locator('[data-memory="agreement_reached"]')).toHaveAttribute('data-on', 'true');
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/7-laboratorio.png`, fullPage: true });
 });

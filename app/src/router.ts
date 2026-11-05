@@ -7,16 +7,19 @@ import { useEffect, useState } from 'react';
  *   #/host/K7P2Q    host: lobby, live dashboard, results
  *   #/jugar/K7P2Q   participant (the QR points here)
  *   #/jugar         participant without a code: type it
+ *   #/laboratorio   facilitator: try the engine and see its memory
  */
 export type Route =
   | { name: 'home' }
   | { name: 'host'; code: string }
-  | { name: 'play'; code: string | null };
+  | { name: 'play'; code: string | null }
+  | { name: 'lab' };
 
 export function parse(hash: string): Route {
   const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean);
   if (parts[0] === 'host' && parts[1]) return { name: 'host', code: parts[1].toUpperCase() };
   if (parts[0] === 'jugar') return { name: 'play', code: parts[1]?.toUpperCase() ?? null };
+  if (parts[0] === 'laboratorio') return { name: 'lab' };
   return { name: 'home' };
 }
 

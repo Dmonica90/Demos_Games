@@ -14,6 +14,33 @@ supabase/migrations/       Base de datos y tiempo real (Supabase).
 
 Cómo correrlo, cómo funciona y cómo editar los casos: [`app/README.md`](app/README.md).
 
+**Direcciones** (una vez que el repositorio se llame `demo`):
+
+| Para | URL |
+| --- | --- |
+| Host (proyectar) | `https://dmonica90.github.io/demo/` |
+| Participantes | las abre el QR (`…/demo/#/jugar/CODIGO`) |
+| Laboratorio del motor | `https://dmonica90.github.io/demo/#/laboratorio` |
+
+> Al renombrar el repositorio, GitHub redirige el código pero **no** la página:
+> la dirección anterior (`…/Shield_Defense/`) deja de funcionar. Después de
+> renombrar, vuelve a publicar con **Actions → Test and deploy → Run workflow**.
+
+## Usarlo en Articulate
+
+El curso solo necesita mostrar la **pantalla del host**; los participantes
+juegan en su celular con el QR.
+
+- **Rise 360:** agrega un bloque **Multimedia → Embed** (o *Code*), pega
+  `https://dmonica90.github.io/demo/` y dale una altura de unos 800 px.
+- **Storyline:** **Insert → Web Object**, pega la misma dirección. Para
+  proyectar, elige *Open in a new browser window*: el QR y el dashboard se ven
+  mejor a pantalla completa. *Display in slide* también funciona.
+- El QR siempre apunta a la página del juego, no a la del LMS, así que los
+  celulares entran directo.
+- Se necesita internet (también dentro de Workday u otro LMS): el juego vive en
+  GitHub Pages y la sesión en Supabase.
+
 ## Puesta en marcha (una sola vez, ~5 minutos)
 
 El sitio es estático (GitHub Pages). Para que los celulares y la pantalla del

@@ -21,6 +21,16 @@ export type SignalId =
   | 'listen'
   | 'support'
   | 'followup'
+  // Positive, from the memory engine (v2)
+  | 'urgency'
+  | 'impact'
+  | 'request'
+  | 'partial'
+  | 'deadline'
+  | 'agreement'
+  | 'responsibility'
+  | 'affirm'
+  | 'gratitude'
   // Negative
   | 'blame'
   | 'pressure'
@@ -47,6 +57,15 @@ export const POSITIVE: SignalId[] = [
   'listen',
   'support',
   'followup',
+  'urgency',
+  'impact',
+  'request',
+  'partial',
+  'deadline',
+  'agreement',
+  'responsibility',
+  'affirm',
+  'gratitude',
 ];
 
 export const NEGATIVE: SignalId[] = [
@@ -77,6 +96,15 @@ export const SIGNAL_LABEL: Record<SignalId, string> = {
   listen: 'Abre espacio a su perspectiva',
   support: 'Ofrece apoyo',
   followup: 'Define seguimiento',
+  urgency: 'Comunica la urgencia',
+  impact: 'Explica el impacto',
+  request: 'Pide algo concreto',
+  partial: 'Propone una entrega parcial',
+  deadline: 'Define una fecha u hora',
+  agreement: 'Confirma el acuerdo',
+  responsibility: 'Aclara quién hace qué',
+  affirm: 'Acepta una propuesta',
+  gratitude: 'Agradece',
   blame: 'Culpa o reclama',
   pressure: 'Presiona sin escuchar',
   hostile: 'Usa descalificaciones',
@@ -89,7 +117,9 @@ export const SIGNAL_LABEL: Record<SignalId, string> = {
   label: 'Etiqueta a la persona',
 };
 
-export const DICTIONARY: Record<Exclude<SignalId, 'shouting' | 'short'>, RegExp> = {
+type V2Only = 'urgency' | 'impact' | 'request' | 'partial' | 'deadline' | 'agreement' | 'responsibility' | 'affirm' | 'gratitude';
+
+export const DICTIONARY: Record<Exclude<SignalId, 'shouting' | 'short' | V2Only>, RegExp> = {
   empathy: words(
     'entiendo',
     'comprendo',
