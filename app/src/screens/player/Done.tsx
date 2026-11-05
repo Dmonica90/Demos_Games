@@ -15,7 +15,7 @@ const END_TEXT = {
 
 /** The participant's own debrief: both results, each criterion, and tips. */
 export function Done({ def, player, convo }: { def: CaseDef; player: Player; convo: Conversation }) {
-  const averages = criteriaAverages(def, convo);
+  const averages = criteriaAverages(convo);
   const weakest = [...CRITERIA].sort((a, b) => averages[a.id] - averages[b.id]).slice(0, 2);
   const score = finalScore(convo);
 

@@ -107,7 +107,7 @@ describe('memoria y continuidad', () => {
     const c1 = play('Sin esos datos de ventas no puedo cerrar el reporte del cliente, necesito los datos de ventas.');
     expect(c1.v2!.memory.pending_offer).toBe('partial');
     const c2 = reply(def, c1, 'Sí, me sirve.', 5);
-    expect(c2.v2!.memory.partial_delivery_proposed).toBe(true);
+    expect(c2.v2!.memory.flags.partial_delivery_proposed).toBe(true);
     expect(c2.v2!.memory.pending_offer).toBe('deadline');
     const c3 = reply(def, c2, 'Va, perfecto.', 6);
     expect(c3.mission).toBe(true);

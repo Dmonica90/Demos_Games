@@ -25,9 +25,9 @@ Sin esas variables (o con `?local=1` en la URL) se usa el modo local: abre el
 host en una pestaña y los "celulares" en otras del mismo navegador.
 `?fast=1` quita la pausa de "escribiendo…"; los tests e2e usan ambas.
 
-## El motor con memoria (caso 1)
+## El motor con memoria (los 3 casos)
 
-El caso 1 usa el motor de `src/engine/v2/`: el compañero no responde solo a la
+Los tres casos usan el motor de `src/engine/v2/`: el interlocutor no responde solo a la
 última frase, sino a todo lo ocurrido, a lo que ya entendió, a lo que todavía
 necesita y a cómo se ha sentido.
 
@@ -38,16 +38,16 @@ necesita y a cómo se ha sentido.
 | `character.ts` | Estrés, confianza, defensividad y disposición; cambian poco a poco (máximo 25 por turno) |
 | `engine.ts` | Reacción a lo nuevo + avance a la siguiente necesidad, sin repetir líneas ni regresar al inicio; cierre natural en el turno 3 |
 | `scoring.ts` | Los 5 criterios por turno; la misión es independiente y al final se muestra el cuadrante (comunicación × acuerdo) |
-| `cases/v2/entrega.config.ts` | Personalidad de Daniel, orden de necesidades y banco de respuestas del caso 1 |
+| `cases/v2/*.config.ts` | Cada caso: sus señales propias, qué recuerda, cómo cambia su ánimo, orden de necesidades y banco de respuestas — Daniel (caso 1), Mariana (caso 2, 3 turnos) y Luis (caso 3, 4 turnos) |
 
 Es una aproximación por reglas, no comprensión real del lenguaje: frases nuevas
 que aparezcan en sesiones reales se agregan al analizador con una prueba en
 `engine/v2/engine.test.ts`. Más adelante `analyze()` puede cambiarse por una API
-sin tocar lo demás. Los casos 2 y 3 siguen con el motor anterior
-(`engine/conversation.ts`) hasta migrarlos con su propio config.
+sin tocar lo demás. Para agregar un caso basta con un archivo de configuración
+nuevo en `cases/v2/`.
 
-**Laboratorio:** `#/laboratorio` permite jugar el caso 1 sin sesión y ver en vivo
-la memoria, la tarea y el ánimo del compañero, con las 5 respuestas de prueba.
+**Laboratorio:** `#/laboratorio` permite jugar cualquiera de los 3 casos sin sesión y ver en vivo
+la memoria, la tarea y el ánimo del compañero, con respuestas de prueba para cada caso.
 
 ## Rutas
 

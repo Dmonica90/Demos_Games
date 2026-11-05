@@ -1,0 +1,392 @@
+import { family } from '../../engine/v2/analyzer';
+import type { V2CaseConfig } from '../../engine/v2/config';
+
+/**
+ * Caso 3 · Necesitamos mejorar — on the memory engine.
+ *
+ * Luis starts on the defensive: he feels only his mistakes get noticed and he
+ * is overloaded. He opens up when he hears facts instead of judgements about
+ * him, and when someone asks how he sees it.
+ */
+export const mejorarConfig: V2CaseConfig = {
+  maxTurns: 4,
+  character: { stress: 60, trust: 50, defensiveness: 35, willingness: 50 },
+  families: {
+    facts: family(
+      true,
+      'en (?:las|los) ultim\\w* (?:\\w+ )?(?:semanas|entregas|reportes|dias|meses|entregables)',
+      'por ejemplo',
+      'especificamente',
+      'concretamente',
+      'en el (?:reporte|informe|entregable) de',
+      '\\d+ (?:errores|veces|entregas|reportes|actividades)',
+      '(?:dos|tres|cuatro|cinco|varias|varios) (?:entregas|veces|reportes|errores|actividades)',
+      'revise',
+      'detecte',
+      'note que',
+      'vi que',
+      'he visto',
+      '(?:los|las) (?:datos|cifras) (?:de|del)',
+      'errores en',
+    ),
+    impact_extra: family(
+      true,
+      'retrabajo',
+      'el equipo (?:tuvo|tiene|tuvimos) que',
+      'tuvimos que (?:corregir|rehacer|volver)',
+      'corregir',
+      'reclamo\\w*',
+      'se (?:retraso|atraso)',
+      'la confianza del cliente',
+      'quedamos mal',
+    ),
+    listen: family(
+      true,
+      'como lo ves',
+      'tu (?:perspectiva|punto de vista|version)',
+      'que ha pasado',
+      'que (?:te )?(?:esta|ha estado) pasando',
+      'cuentame',
+      '(?:quiero|me gustaria) escucharte',
+      'que opinas',
+      'como te sientes',
+      'como estas con',
+      'que necesitas',
+      'que te ayudaria',
+      '(?:hay|existe) algo que',
+    ),
+    label: family(
+      false,
+      'eres (?:un |una |muy )?(?:descuidad\\w*|irresponsab\\w*|flojo|floja|desorganizad\\w*|lent[oa]|distraid\\w*|desastre)',
+      'siempre te equivocas',
+      'no sirves',
+      'descuidad\\w*',
+      'no te importa',
+    ),
+    avoid: family(
+      false,
+      'no pasa nada',
+      'no te preocupes',
+      'olvidalo',
+      'no es (?:tan )?(?:importante|grave)',
+      'dejemoslo',
+      'no es para tanto',
+      'todo bien',
+      'sigue asi',
+    ),
+    support: family(
+      true,
+      'apoy\\w*',
+      'ayud\\w*',
+      'acompan\\w*',
+      'capacit\\w*',
+      'revis\\w* juntos',
+      'juntos',
+      'recursos',
+      'mentor\\w*',
+    ),
+    actions: family(
+      true,
+      'checklist',
+      'lista de (?:verificacion|revision|chequeo|pasos)',
+      'revisar antes de (?:enviar|entregar|mandar)',
+      'doble revision',
+      'validar (?:los datos|antes|las cifras)',
+      'plantilla',
+      'ajustar (?:tu|la) carga',
+      'priorizar (?:tus|las) (?:tareas|actividades)',
+      'un (?:plan|paso a paso)',
+      'proceso de revision',
+      'que alguien (?:revise|valide)',
+      'otro par de ojos',
+    ),
+    followup: family(
+      true,
+      'seguimiento',
+      'revisemos',
+      'lo revisamos',
+      'cada (?:semana|lunes|martes|miercoles|jueves|viernes)',
+      'semanal\\w*',
+      'reunion\\w*',
+      'check ?in',
+      '1:1',
+      'uno a uno',
+      'en (?:dos|2|una|1|tres|3) semanas?',
+      'la proxima semana',
+      'nos vemos el',
+    ),
+  },
+  stall: [
+    { id: 'stall-1', text: 'Sigo sin entender qué es lo que está mal.' },
+    { id: 'stall-2', text: 'No sé qué más decirte si no me dices qué cambiar.' },
+  ],
+  concrete: [
+    { signal: 'facts' },
+    { signal: 'impact' },
+    { signal: 'impact_extra' },
+    { signal: 'listen' },
+    { signal: 'support' },
+    { signal: 'actions' },
+    { signal: 'followup' },
+    { signal: 'deadline' },
+  ],
+  aliases: {
+    facts: 'request',
+    impact_extra: 'impact',
+    listen: 'empathy',
+    support: 'partial',
+    actions: 'partial',
+    followup: 'deadline',
+    label: 'blame',
+    avoid: 'vague',
+  },
+  flags: [
+    { id: 'facts_described', label: 'Describió hechos', from: ['facts'] },
+    { id: 'impact_explained', label: 'Explicó el impacto', from: ['impact', 'impact_extra'] },
+    { id: 'perspective_heard', label: 'Escuchó su perspectiva', from: ['listen'], needsGoodwill: true },
+    { id: 'empathy_shown', label: 'Reconoció su esfuerzo', from: ['empathy'], needsGoodwill: true },
+    { id: 'actions_defined', label: 'Acciones definidas', from: ['actions'] },
+    { id: 'support_offered', label: 'Ofreció apoyo', from: ['support'], needsGoodwill: true },
+    { id: 'followup_defined', label: 'Seguimiento definido', from: ['followup', 'deadline'] },
+    { id: 'agreement_reached', label: 'Acuerdo', from: [] },
+  ],
+  stages: [
+    { id: 'facts_shared', flag: 'facts_described' },
+    { id: 'heard', flag: 'perspective_heard' },
+    { id: 'actions_set', flag: 'actions_defined' },
+    { id: 'followup_set', flag: 'followup_defined' },
+    { id: 'agreement', flag: 'agreement_reached' },
+  ],
+  escalating: [{ signal: 'hostile' }, { signal: 'label' }, { signal: 'blame' }, { signal: 'pressure', unless: ['empathy'] }],
+  unclear: ['avoid'],
+  moodRules: [
+    { signal: 'empathy', delta: { trust: 8, defensiveness: -8 } },
+    { signal: 'gratitude', delta: { trust: 3 } },
+    { signal: 'listen', delta: { trust: 12, defensiveness: -12, willingness: 8 } },
+    { signal: 'facts', delta: { defensiveness: -3, willingness: 3 } },
+    { signal: 'impact', delta: { willingness: 8, stress: 5 } },
+    { signal: 'impact_extra', unless: ['impact'], delta: { willingness: 8, stress: 5 } },
+    { signal: 'support', delta: { trust: 8, willingness: 10, stress: -8 } },
+    { signal: 'actions', delta: { willingness: 8 } },
+    { signal: 'followup', delta: { willingness: 5 } },
+    { signal: 'avoid', delta: { stress: 5 } },
+    { signal: 'vague', delta: { stress: 5 } },
+    { signal: 'label', delta: { defensiveness: 30, trust: -20, willingness: -10 } },
+    { signal: 'blame', unless: ['label'], delta: { defensiveness: 25, trust: -15 } },
+    { signal: 'pressure', delta: { defensiveness: 20, trust: -10 } },
+    { signal: 'hostile', delta: { defensiveness: 40, trust: -30, willingness: -25 } },
+    { signal: 'shouting', delta: { defensiveness: 10 } },
+  ],
+  uncapped: ['hostile'],
+  reactionOrder: [
+    { reaction: 'hostile', signal: 'hostile' },
+    { reaction: 'label', signal: 'label' },
+    { reaction: 'blame', signal: 'blame' },
+    { reaction: 'pressure', signal: 'pressure', unless: ['empathy'] },
+    { reaction: 'avoid', signal: 'avoid', unless: ['facts'] },
+    { reaction: 'accept', accepted: true },
+    { reaction: 'perspective', newFlag: 'perspective_heard' },
+    { reaction: 'facts', newFlag: 'facts_described' },
+    { reaction: 'impact', newFlag: 'impact_explained' },
+    { reaction: 'actions', newFlag: 'actions_defined' },
+    { reaction: 'support', newFlag: 'support_offered' },
+    { reaction: 'followup', newFlag: 'followup_defined' },
+    { reaction: 'empathy', newFlag: 'empathy_shown' },
+  ],
+  brokenReaction: 'label',
+  planReady: (f) => f.actions_defined && f.followup_defined,
+  closers: ['agreement'],
+  agreementFlag: 'agreement_reached',
+  lastClosing: (f) => (f.actions_defined || f.support_offered ? 'last_adjustment' : 'cannot_commit'),
+  slotDefaults: {
+    deliverable: 'los reportes',
+    deadline: 'la próxima semana',
+    partial: 'una primera revisión',
+    partialWhen: 'esta semana',
+  },
+  needs: [
+    {
+      id: 'facts',
+      met: (f) => f.facts_described,
+      ask: [
+        { id: 'facts-1', text: '¿Qué errores exactamente? Siento que es algo muy general.' },
+        { id: 'facts-2', text: '¿Me puedes dar un ejemplo concreto? Así sé de qué hablamos.' },
+      ],
+    },
+    {
+      id: 'impact',
+      met: (f) => f.impact_explained,
+      ask: [
+        { id: 'impact-1', text: 'Ok… ¿y eso a quién le afecta? Pensé que eran detalles menores.' },
+        { id: 'impact-2', text: '¿Qué pasó por esos errores? No lo tenía tan claro.' },
+      ],
+    },
+    {
+      id: 'listen',
+      met: (f) => f.perspective_heard,
+      ask: [
+        { id: 'listen-1', text: 'Entiendo lo que dices, pero nadie me ha preguntado cómo estoy con la carga.' },
+        { id: 'listen-2', text: 'Siento que esto va en una sola dirección.' },
+      ],
+    },
+    {
+      id: 'actions',
+      met: (f) => f.actions_defined,
+      offer: {
+        id: 'checklist',
+        when: (c) => c.willingness >= 60 && c.defensiveness < 50,
+        sets: ['actions_defined', 'support_offered'],
+        lines: [
+          {
+            id: 'offer-check-1',
+            text: 'Podría usar una lista de verificación antes de enviar, si me ayudas a revisarla la primera vez. ¿Te parece?',
+          },
+        ],
+      },
+      ask: [
+        { id: 'act-1', text: 'Quiero mejorar, pero ¿qué hago diferente?' },
+        { id: 'act-2', text: '¿Qué propones que cambiemos en cómo trabajo?' },
+      ],
+    },
+    {
+      id: 'followup',
+      met: (f) => f.followup_defined,
+      offer: {
+        id: 'review',
+        when: (c) => c.willingness >= 60 && c.defensiveness < 50,
+        sets: ['followup_defined'],
+        fills: { deadline: 'el próximo viernes' },
+        lines: [{ id: 'offer-review-1', text: '¿Lo revisamos juntos el próximo viernes para ver cómo voy?' }],
+      },
+      ask: [
+        { id: 'fu-1', text: '¿Y cómo vamos a saber si está funcionando?' },
+        { id: 'fu-2', text: '¿Cuándo lo revisamos para ver cómo voy?' },
+      ],
+    },
+    {
+      id: 'confirm',
+      met: (f) => f.agreement_reached,
+      confirm: { id: 'confirm', sets: ['agreement_reached'] },
+      ask: [
+        {
+          id: 'confirm-1',
+          text: 'Entonces quedamos: hago los cambios que acordamos, me apoyas al principio y lo revisamos {deadline}. ¿Va?',
+        },
+        { id: 'confirm-2', text: 'Solo para confirmar: ¿lo revisamos {deadline}?' },
+      ],
+    },
+  ],
+  reactions: {
+    perspective: {
+      normal: [
+        { id: 'r-per-1', text: 'Gracias por preguntar. La verdad tengo mucha carga y reviso todo muy rápido.' },
+        { id: 'r-per-2', text: 'Me ayuda que me lo preguntes. Siento que no me da el tiempo.' },
+      ],
+      guarded: [{ id: 'r-per-g1', text: 'Bueno… la verdad es que no me da el tiempo.' }],
+    },
+    facts: {
+      normal: [
+        { id: 'r-fact-1', text: 'Ok… no sabía que eran tantos.' },
+        { id: 'r-fact-2', text: 'Bueno, sí, en esos reportes iba muy rápido.' },
+      ],
+      guarded: [{ id: 'r-fact-g1', text: 'Ok, esos sí los tengo presentes.' }],
+    },
+    impact: {
+      normal: [
+        { id: 'r-imp-1', text: 'No sabía que eso estaba afectando al equipo.' },
+        { id: 'r-imp-2', text: 'Uf, no me había dado cuenta del retrabajo que generaba.' },
+      ],
+      guarded: [{ id: 'r-imp-g1', text: 'Ok, ya entendí que afecta.' }],
+    },
+    actions: {
+      normal: [
+        { id: 'r-act-1', text: 'Sí, eso lo puedo hacer.' },
+        { id: 'r-act-2', text: 'Ok, eso me parece concreto.' },
+      ],
+      guarded: [{ id: 'r-act-g1', text: 'Lo intento.' }],
+    },
+    support: {
+      normal: [
+        { id: 'r-sup-1', text: 'Eso me ayudaría mucho.' },
+        { id: 'r-sup-2', text: 'Me sirve saber que no estoy solo en esto.' },
+      ],
+      guarded: [{ id: 'r-sup-g1', text: 'Ok, gracias.' }],
+    },
+    followup: {
+      normal: [
+        { id: 'r-fu-1', text: '{deadline} me parece bien para revisarlo.' },
+        { id: 'r-fu-2', text: 'Va, revisarlo {deadline} me ayuda a no perder el hilo.' },
+      ],
+      guarded: [{ id: 'r-fu-g1', text: 'Ok, {deadline}.' }],
+    },
+    empathy: {
+      normal: [
+        { id: 'r-emp-1', text: 'Gracias, se agradece que lo reconozcas.' },
+        { id: 'r-emp-2', text: 'Sí, de verdad he estado haciendo todo lo posible.' },
+      ],
+      guarded: [{ id: 'r-emp-g1', text: 'Ok… gracias.' }],
+    },
+    accept: {
+      normal: [
+        { id: 'r-acc-1', text: 'Perfecto.' },
+        { id: 'r-acc-2', text: 'Va, me parece bien.' },
+      ],
+      guarded: [{ id: 'r-acc-g1', text: 'Ok.' }],
+    },
+    avoid: {
+      normal: [
+        { id: 'r-avo-1', text: 'Ah, ok… entonces, ¿todo bien? No entiendo para qué era la reunión.' },
+        { id: 'r-avo-2', text: 'Entonces… ¿no era tan grave? Ya me confundí.' },
+      ],
+      guarded: [{ id: 'r-avo-g1', text: 'No entiendo qué esperas de mí.' }],
+    },
+    label: {
+      normal: [
+        { id: 'r-lab-1', text: 'No soy así. Me estás juzgando a mí, no a mi trabajo.' },
+        { id: 'r-lab-2', text: '¿Ves? Justo esto es lo que digo: solo se fijan en lo malo.' },
+      ],
+      guarded: [
+        { id: 'r-lab-g1', text: 'Si piensas eso de mí, no sé para qué seguimos hablando.' },
+        { id: 'r-lab-g2', text: 'Ok. Ya entendí lo que piensas de mí.' },
+      ],
+    },
+    blame: {
+      normal: [
+        { id: 'r-bla-1', text: '¿Ves? Justo esto es lo que digo: solo se fijan en lo malo.' },
+        { id: 'r-bla-2', text: 'Así no dan ganas de nada.' },
+      ],
+      guarded: [{ id: 'r-bla-g1', text: 'Si piensas eso de mí, no sé para qué seguimos hablando.' }],
+    },
+    pressure: {
+      normal: [{ id: 'r-pre-1', text: 'Así, con presión, me cuesta todavía más.' }],
+      guarded: [{ id: 'r-pre-g1', text: 'Ok. Lo que digas.' }],
+    },
+    hostile: {
+      normal: [{ id: 'r-hos-1', text: 'No tienes por qué hablarme así.' }],
+      guarded: [{ id: 'r-hos-g1', text: 'Mejor lo hablamos con Recursos Humanos.' }],
+    },
+  },
+  closings: {
+    agreement: {
+      normal: [
+        {
+          id: 'end-ok-1',
+          text: 'Me sirve mucho que lo hayamos aterrizado así. Me comprometo y lo revisamos {deadline}. Gracias por el apoyo.',
+        },
+      ],
+      guarded: [{ id: 'end-ok-g1', text: 'Ok, me comprometo. Lo revisamos {deadline}.' }],
+    },
+    last_adjustment: {
+      normal: [{ id: 'end-adj-1', text: 'Ok, voy a aplicar lo que hablamos. Ojalá lo podamos revisar pronto.' }],
+      guarded: [{ id: 'end-adj-g1', text: 'Intentaré aplicar lo que dijiste.' }],
+    },
+    cannot_commit: {
+      normal: [{ id: 'end-no-1', text: 'Bueno… intentaré tener más cuidado.' }],
+      guarded: [{ id: 'end-no-g1', text: 'Ok. Intentaré tener más cuidado.' }],
+    },
+    deteriorated: {
+      normal: [{ id: 'end-bad-1', text: 'Ok. Haré lo que me digan y ya.' }],
+      guarded: [{ id: 'end-bad-g1', text: 'Ok. Haré lo que me digan y ya.' }],
+    },
+  },
+};

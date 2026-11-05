@@ -3,10 +3,17 @@ import type { Analysis } from './types';
 
 const clamp = (n: number) => Math.max(0, Math.min(1, n));
 
-/** The five criteria (0–1) for one message, from its signals. */
-export function scoreMessage(a: Analysis): CriteriaScores {
-  const s = a.signals;
-  const v = (id: keyof Analysis['signals']) => s[id] ?? 0;
+/**
+ * The five criteria (0–1) for one message. Case-specific signals count as the
+ * common one they stand for (`aliases`: "capacity" → "impact", "label" →
+ * "blame"…), taking the strongest.
+ */
+export function scoreMessage(a: Analysis, aliases: Record<string, string> = {}): CriteriaScores {
+  const s: Record<string, number> = { ...a.signals };
+  for (const [from, to] of Object.entries(aliases)) {
+    if (a.signals[from]) s[to] = Math.max(s[to] ?? 0, a.signals[from]);
+  }
+  const v = (id: string) => s[id] ?? 0;
 
   const clarity =
     0.4 + v('request') * 0.3 + (v('deadline') ? 0.15 : 0) + (v('partial') ? 0.1 : 0) + (v('impact') ? 0.05 : 0) -
