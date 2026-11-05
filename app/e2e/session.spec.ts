@@ -38,11 +38,12 @@ test('una sesión completa: QR, sala, conversación, dashboard y ranking', async
   const ana = await phone(context, url, 'Ana');
   const beto = await phone(context, url, 'Beto');
   const caro = await phone(context, url, 'Caro');
-  await expect(host.getByText('3 conectados')).toBeVisible();
+  const dani = await phone(context, url, 'Dani'); // never writes
+  await expect(host.getByText('4 conectados')).toBeVisible();
   if (SHOTS) await ana.screenshot({ path: `${SHOTS}/2-phone-waiting.png` });
 
   await host.getByRole('button', { name: 'Iniciar actividad' }).click();
-  for (const p of [ana, beto, caro]) await expect(p.getByText('No he podido terminar la información')).toBeVisible();
+  for (const p of [ana, beto, caro, dani]) await expect(p.getByText('No he podido terminar la información')).toBeVisible();
 
   // Ana: clear, empathetic, assertive; Daniel sums up the plan and she confirms.
   await say(
@@ -72,9 +73,13 @@ test('una sesión completa: QR, sala, conversación, dashboard y ranking', async
 
   await host.getByRole('button', { name: 'Terminar y ver resultados' }).click();
   const ranking = host.getByRole('list', { name: 'Ranking' }).getByRole('listitem');
-  await expect(ranking).toHaveCount(3);
+  await expect(ranking).toHaveCount(4);
   await expect(ranking.nth(0)).toContainText('Ana');
   await expect(ranking.nth(2)).toContainText('Caro');
+  // Not writing at all ends in red with 0 points, below everyone who tried.
+  await expect(ranking.nth(3)).toContainText('Dani');
+  await expect(ranking.nth(3)).toContainText('Rojo');
+  await expect(dani.getByText('no enviaste ningún mensaje')).toBeVisible();
   await expect(host.getByText('Culpa o reclama')).toBeVisible();
   if (SHOTS) await host.screenshot({ path: `${SHOTS}/6-host-results.png`, fullPage: true });
 

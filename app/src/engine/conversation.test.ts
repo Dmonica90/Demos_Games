@@ -83,3 +83,21 @@ describe('estructura de los casos', () => {
     expect(def.observe).toHaveLength(4);
   });
 });
+
+describe('candado de tiempo', () => {
+  it.each(CASES)('$title: sin ningún mensaje, al acabarse el tiempo pasa a rojo con 0 puntos', (def) => {
+    const c = timeUp(start(def, 0), 10);
+    expect(c.done).toBe(true);
+    expect(c.color).toBe('red');
+    expect(c.points).toBe(0);
+    expect(c.mission).toBe(false);
+    if (def.v2) expect(c.quadrant).toBe('deteriorated');
+  });
+
+  it('quien sí escribió conserva su barra al acabarse el tiempo', () => {
+    const def = CASES[0];
+    const c = timeUp(reply(def, start(def, 0), 'Entiendo que tienes mucha carga, gracias por avisarme.', 1), 10);
+    expect(c.color).toBe('green');
+    expect(c.points).toBeGreaterThan(0);
+  });
+});
