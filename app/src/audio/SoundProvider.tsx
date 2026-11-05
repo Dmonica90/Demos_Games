@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { SFX } from '../assets';
 import type { SfxName } from '../assets';
 
-const STORAGE_KEY = 'clip-shield-defense:muted';
+const STORAGE_KEY = 'simcom:muted';
 
 type SoundValue = {
   muted: boolean;
@@ -14,7 +14,7 @@ type SoundValue = {
 const SoundContext = createContext<SoundValue | null>(null);
 
 /**
- * Thin wrapper over a pool of preloaded <audio> elements. The course uses nine
+ * Thin wrapper over a pool of preloaded <audio> elements. The game uses six
  * short effects and no narration, so nothing here needs to be localized — only
  * muted.
  */

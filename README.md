@@ -1,38 +1,46 @@
-# Clip Shield Defense
+# Simulador de comunicación escrita
 
-**False Security — First Line of Defense.** Un micro-learning interactivo de
-10–12 minutos que entrena a los empleados de Clip en decisiones de seguridad
-Zero Trust: cuándo escalar un problema, no cómo resolverlo.
+Una competencia grupal en vivo para practicar cómo comunicar situaciones
+difíciles del trabajo por escrito. El host elige un caso y proyecta un código QR;
+cada participante entra desde su celular y resuelve **exactamente el mismo
+escenario**, al mismo tiempo y con las mismas reglas. El host ve en vivo una
+barra por persona y, al final, el ranking, las estrategias que funcionaron y los
+errores frecuentes.
 
 ```
-app/   El curso. React + Vite + TypeScript, compilado como sitio estático.
+app/                       El juego. React + Vite + TypeScript, sitio estático.
+supabase/migrations/       Base de datos y tiempo real (Supabase).
 ```
 
-Todo el detalle —cómo correrlo, la arquitectura, las reglas y cómo editar el
-guion— está en [`app/README.md`](app/README.md).
+Cómo correrlo, cómo funciona y cómo editar los casos: [`app/README.md`](app/README.md).
 
-```bash
-cd app
-npm install
-npm run dev
-```
+## Puesta en marcha (una sola vez, ~5 minutos)
 
-`npm run build` genera un sitio estático en `app/dist/`.
+El sitio es estático (GitHub Pages). Para que los celulares y la pantalla del
+host se hablen en tiempo real usamos **Supabase** (plan gratuito).
 
-## Publicación
+1. Crea un proyecto en [supabase.com](https://supabase.com) (región cercana, cualquier contraseña).
+2. En el proyecto: **SQL Editor → New query**, pega todo
+   [`supabase/migrations/001_init.sql`](supabase/migrations/001_init.sql) y presiona **Run**.
+3. En **Project Settings → API** copia el **Project URL** y la clave **anon public**.
+4. En GitHub: **Settings → Secrets and variables → Actions → Variables** crea
+   `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` con esos valores. (Son
+   públicos por diseño: viajan en la página; la seguridad la dan las reglas de
+   la base de datos.)
+5. **Settings → Pages → Source: GitHub Actions**. Cada push a `main` publica en
+   `https://dmonica90.github.io/Shield_Defense/`.
 
-`.github/workflows/deploy.yml` corre los tests y el build en cada pull request, y
-en cada push a `main` además publica el sitio en GitHub Pages. Para que el deploy
-funcione, **Settings → Pages → Source** debe estar en **GitHub Actions**. GitHub
-Pages en repositorios privados requiere un plan de pago de GitHub.
+## Cómo llega el QR al celular
 
-El destino final es Workday vía SCORM; ver "Siguiente paso: SCORM" en
-[`app/README.md`](app/README.md).
+- El host abre el sitio, elige un caso y pulsa **Crear sesión**: se genera un
+  código de 5 caracteres (p. ej. `K7P2Q`).
+- El QR apunta a `https://dmonica90.github.io/Shield_Defense/#/jugar/K7P2Q`. La
+  ruta va después de `#` para que GitHub Pages siempre sirva la misma página.
+- El celular abre esa dirección, pide un nickname y aparece en la sala del host.
+  Debajo del QR también se muestran el enlace y el código, para quien prefiera
+  escribirlo.
+- Los celulares solo necesitan internet (datos o WiFi); no tienen que estar en
+  la misma red que la computadora del host.
 
-## Origen
-
-El proyecto parte de la base de
-[Zero-Trust](https://github.com/Dmonica90/Zero-Trust) ("The Infiltrator"): misma
-arquitectura (reducer puro, guion en JSON validado por tests, una pantalla por
-fase). El contenido, las reglas y las pantallas son nuevos; se conservaron los
-componentes de interfaz y los efectos de sonido.
+Sin Supabase configurado el sitio funciona en **modo local**: solo pueden
+unirse otras pestañas del mismo navegador. Sirve para probar a solas.
