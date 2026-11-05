@@ -107,3 +107,20 @@ test('el laboratorio muestra la memoria del motor', async ({ page }) => {
   await expect(page.locator('[data-memory="agreement_reached"]')).toHaveAttribute('data-on', 'true');
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/7-laboratorio.png`, fullPage: true });
 });
+
+test('el laboratorio también prueba los casos 2 y 3', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/?local=1#/laboratorio');
+  await page.getByRole('button', { name: 'Caso 2: Todo es urgente' }).click();
+  await page.getByRole('button', { name: 'Expone carga y prioriza' }).click();
+  await page.getByRole('button', { name: 'Enviar' }).click();
+  await expect(page.locator('[data-memory="capacity_explained"]')).toHaveAttribute('data-on', 'true');
+  await expect(page.getByText('mover el reporte mensual al lunes')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Caso 3: Necesitamos mejorar' }).click();
+  await page.getByRole('button', { name: 'Hechos y escucha' }).click();
+  await page.getByRole('button', { name: 'Enviar' }).click();
+  await expect(page.locator('[data-memory="perspective_heard"]')).toHaveAttribute('data-on', 'true');
+  await expect(page.getByText('Gracias por preguntar')).toBeVisible();
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/8-laboratorio-caso3.png`, fullPage: true });
+});

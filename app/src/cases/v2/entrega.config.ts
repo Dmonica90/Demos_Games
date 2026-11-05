@@ -10,6 +10,59 @@ import type { V2CaseConfig } from '../../engine/v2/config';
 export const entregaConfig: V2CaseConfig = {
   maxTurns: 3,
   character: { stress: 70, trust: 60, defensiveness: 20, willingness: 70 },
+  stall: [
+    { id: 'stall-1', text: 'Ok… dime qué necesitas y veo cómo me organizo.' },
+    { id: 'stall-2', text: 'Mmm, sigo sin tener claro cómo quieres que lo resolvamos.' },
+  ],
+  concrete: [{ signal: 'request', minStrength: 1 }, { signal: 'deadline' }, { signal: 'partial' }],
+  flags: [
+    { id: 'urgency_explained', label: 'Urgencia explicada', from: ['urgency'] },
+    { id: 'impact_explained', label: 'Impacto explicado', from: ['impact'] },
+    { id: 'empathy_shown', label: 'Mostró empatía', from: ['empathy'], needsGoodwill: true },
+    { id: 'request_clarity', label: 'Pidió algo concreto', from: ['request'], minStrength: 1 },
+    { id: 'partial_delivery_proposed', label: 'Entrega parcial', from: ['partial'] },
+    { id: 'deadline_defined', label: 'Fecha definida', from: ['deadline'] },
+    { id: 'responsibility_confirmed', label: 'Responsable claro', from: ['responsibility'] },
+    { id: 'agreement_reached', label: 'Acuerdo', from: [] },
+  ],
+  stages: [
+    { id: 'need_clarified', flag: 'request_clarity' },
+    { id: 'partial_offer', flag: 'partial_delivery_proposed' },
+    { id: 'timeline_proposed', flag: 'deadline_defined' },
+    { id: 'agreement', flag: 'agreement_reached' },
+  ],
+  escalating: [{ signal: 'hostile' }, { signal: 'blame' }, { signal: 'pressure', unless: ['empathy'] }],
+  moodRules: [
+    { signal: 'empathy', delta: { trust: 10, defensiveness: -10, stress: -5 } },
+    { signal: 'gratitude', delta: { trust: 4 } },
+    { signal: 'impact', delta: { willingness: 10 } },
+    { signal: 'urgency', unless: ['impact'], delta: { stress: 5 } },
+    { signal: 'request', minStrength: 1, delta: { willingness: 5 } },
+    { signal: 'partial', delta: { stress: -10, willingness: 8 } },
+    { signal: 'vague', delta: { stress: 5 } },
+    { signal: 'pressure', delta: { defensiveness: 20, trust: -10, stress: 10 } },
+    { signal: 'blame', delta: { defensiveness: 25, trust: -15, willingness: -10 } },
+    { signal: 'hostile', delta: { defensiveness: 40, trust: -30, willingness: -25 } },
+    { signal: 'shouting', delta: { defensiveness: 10 } },
+  ],
+  uncapped: ['hostile'],
+  reactionOrder: [
+    { reaction: 'hostile', signal: 'hostile' },
+    { reaction: 'blame', signal: 'blame' },
+    { reaction: 'pressure', signal: 'pressure', unless: ['empathy'] },
+    { reaction: 'accept', accepted: true },
+    { reaction: 'partial', newFlag: 'partial_delivery_proposed' },
+    { reaction: 'impact', newFlag: 'impact_explained' },
+    { reaction: 'empathy', newFlag: 'empathy_shown' },
+    { reaction: 'urgency', newFlag: 'urgency_explained' },
+    { reaction: 'request', newFlag: 'request_clarity' },
+    { reaction: 'deadline', newFlag: 'deadline_defined' },
+  ],
+  brokenReaction: 'blame',
+  planReady: (f) => f.deadline_defined && (f.partial_delivery_proposed || f.request_clarity),
+  closers: ['agreement'],
+  agreementFlag: 'agreement_reached',
+  lastClosing: (f) => (f.deadline_defined || f.partial_delivery_proposed ? 'last_adjustment' : 'cannot_commit'),
   slotDefaults: {
     deliverable: 'la información',
     deadline: 'mañana',
@@ -19,7 +72,7 @@ export const entregaConfig: V2CaseConfig = {
   needs: [
     {
       id: 'why',
-      met: (m) => m.urgency_explained || m.impact_explained,
+      met: (f) => f.urgency_explained || f.impact_explained,
       ask: [
         { id: 'why-1', text: '¿Es para hoy sí o sí, o tengo un poco de margen?' },
         { id: 'why-2', text: 'Para organizarme: ¿qué pasa si te llega un poco más tarde?' },
@@ -27,7 +80,7 @@ export const entregaConfig: V2CaseConfig = {
     },
     {
       id: 'what',
-      met: (m) => m.request_clarity,
+      met: (f) => f.request_clarity,
       ask: [
         { id: 'what-1', text: '¿Qué parte necesitas exactamente para poder avanzar?' },
         { id: 'what-2', text: 'Para no mandarte de más: ¿cuál es la sección que te está frenando?' },
@@ -35,10 +88,11 @@ export const entregaConfig: V2CaseConfig = {
     },
     {
       id: 'partial',
-      met: (m) => m.partial_delivery_proposed,
+      met: (f) => f.partial_delivery_proposed,
       offer: {
+        id: 'partial',
         when: (c) => c.willingness >= 75 && c.defensiveness < 50,
-        pending: 'partial',
+        sets: ['partial_delivery_proposed'],
         lines: [
           {
             id: 'offer-partial-1',
@@ -53,10 +107,11 @@ export const entregaConfig: V2CaseConfig = {
     },
     {
       id: 'when',
-      met: (m) => m.deadline_defined,
+      met: (f) => f.deadline_defined,
       offer: {
+        id: 'deadline',
         when: (c) => c.willingness >= 70 && c.defensiveness < 50,
-        pending: 'deadline',
+        sets: ['deadline_defined'],
         fills: { deadline: 'mañana a mediodía' },
         lines: [{ id: 'offer-when-1', text: 'El resto lo podría tener mañana a mediodía. ¿Te funciona?' }],
       },
@@ -67,7 +122,8 @@ export const entregaConfig: V2CaseConfig = {
     },
     {
       id: 'confirm',
-      met: (m) => m.agreement_reached,
+      met: (f) => f.agreement_reached,
+      confirm: { id: 'confirm', sets: ['agreement_reached', 'responsibility_confirmed'] },
       ask: [
         { id: 'confirm-1', text: 'Entonces quedamos así: te mando {partial} {partialWhen} y el resto {deadline}. ¿Va?' },
         { id: 'confirm-2', text: 'Solo para confirmar: ¿te late que quede así, con el resto {deadline}?' },

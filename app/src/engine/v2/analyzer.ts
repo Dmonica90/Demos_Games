@@ -1,4 +1,5 @@
 import { isShouting, normalize, wordCount } from '../text';
+import type { Family } from './config';
 import type { Analysis, V2Signal } from './types';
 
 /**
@@ -14,7 +15,7 @@ import type { Analysis, V2Signal } from './types';
 const rx = (...alts: string[]) => new RegExp(`\\b(?:${alts.join('|')})\\b`, 'g');
 
 /** Families matched on normalised text (lower case, no accents). */
-const FAMILIES: Partial<Record<V2Signal, { patterns: RegExp; negatable: boolean; weak?: RegExp }>> = {
+export const FAMILIES: Record<V2Signal, Family> = {
   empathy: {
     negatable: true,
     patterns: rx(
@@ -216,13 +217,25 @@ const DEADLINE = new RegExp(
   'g',
 );
 
-export function analyze(text: string): Analysis {
+/** Builds a family from alternatives, for case configs. */
+export const family = (negatable: boolean, ...alternatives: string[]): Family => ({
+  patterns: rx(...alternatives),
+  negatable,
+});
+
+const DEFAULT_CONCRETE = [{ signal: 'request', minStrength: 1 }, { signal: 'deadline' }, { signal: 'partial' }];
+
+export function analyze(
+  text: string,
+  extra: Record<V2Signal, Family> = {},
+  concrete: { signal: string; minStrength?: number }[] = DEFAULT_CONCRETE,
+): Analysis {
   const plain = normalize(text);
   const lower = text.toLowerCase();
   const signals: Analysis['signals'] = {};
 
-  for (const [id, family] of Object.entries(FAMILIES) as [V2Signal, NonNullable<(typeof FAMILIES)[V2Signal]>][]) {
-    if (positiveMatch(plain, family.patterns, family.negatable)) signals[id] = 1;
+  for (const [id, fam] of Object.entries({ ...FAMILIES, ...extra })) {
+    if (positiveMatch(plain, fam.patterns, fam.negatable)) signals[id] = 1;
   }
 
   // "Entiendo" negated means confusion, not empathy.
@@ -262,9 +275,9 @@ export function analyze(text: string): Analysis {
   // "Affirm" only means something in a short reply ("sí, va"), not inside a long message.
   if (signals.affirm && words > 12) delete signals.affirm;
   // Vague only if the message carries nothing concrete.
-  if (signals.vague && (signals.request === 1 || signals.deadline || signals.partial)) delete signals.vague;
-  if (!signals.vague && signals.short && !signals.affirm && !signals.deadline && !signals.request && !signals.partial)
-    signals.vague = 1;
+  const hasSubstance = concrete.some((c) => (signals[c.signal] ?? 0) >= (c.minStrength ?? 0.5));
+  if (signals.vague && hasSubstance) delete signals.vague;
+  if (!signals.vague && signals.short && !signals.affirm && !hasSubstance) signals.vague = 1;
 
   return { signals, deliverable, deadline, partial, partialWhen, words };
 }

@@ -1,15 +1,9 @@
-import type { Analysis, Memory, TaskStatus } from './types';
+import type { V2CaseConfig } from './config';
+import type { Analysis, Memory } from './types';
 
-export function emptyMemory(): Memory {
+export function emptyMemory(cfg: V2CaseConfig): Memory {
   return {
-    urgency_explained: false,
-    impact_explained: false,
-    empathy_shown: false,
-    request_clarity: false,
-    partial_delivery_proposed: false,
-    deadline_defined: false,
-    responsibility_confirmed: false,
-    agreement_reached: false,
+    flags: Object.fromEntries(cfg.flags.map((f) => [f.id, false])),
     asked_topics: [],
     ask_count: {},
     used_responses: [],
@@ -20,47 +14,32 @@ export function emptyMemory(): Memory {
 
 /**
  * Folds one message into what the character remembers. Facts only accumulate:
- * once the urgency is explained it stays explained. A short "yes" accepts
- * whatever the character offered on the previous turn.
+ * once something is understood it stays understood.
  */
-export function updateMemory(memory: Memory, a: Analysis, hostile: boolean): Memory {
-  const s = a.signals;
-  const m: Memory = { ...memory, slots: { ...memory.slots } };
-  // Facts said while insulting still count as said, but goodwill does not.
-  if (s.urgency) m.urgency_explained = true;
-  if (s.impact) m.impact_explained = true;
-  if (s.empathy && !hostile && !s.blame) m.empathy_shown = true;
-  if (s.request === 1) m.request_clarity = true;
-  if (a.deliverable && s.request === 1) m.slots.deliverable = a.deliverable;
-  if (s.partial) {
-    m.partial_delivery_proposed = true;
-    m.slots.partial = a.partial;
+export function updateMemory(cfg: V2CaseConfig, memory: Memory, a: Analysis, attacking: boolean): Memory {
+  const flags = { ...memory.flags };
+  for (const f of cfg.flags) {
+    if (f.needsGoodwill && attacking) continue;
+    if (f.unless?.some((u) => a.signals[u])) continue;
+    if (f.from.some((s) => (a.signals[s] ?? 0) >= (f.minStrength ?? 0.5))) flags[f.id] = true;
   }
-  if (a.deadline) {
-    m.deadline_defined = true;
-    m.slots.deadline = a.deadline;
-  }
-  if (a.partialWhen) m.slots.partialWhen = a.partialWhen;
-  if (s.responsibility) m.responsibility_confirmed = true;
-
-  // A yes (or an explicit agreement) accepts the offer on the table.
-  const accepts = (s.affirm || s.agreement || s.gratitude) && !s.blame && !hostile;
-  if (accepts && m.pending_offer === 'partial') m.partial_delivery_proposed = true;
-  if (accepts && m.pending_offer === 'deadline') m.deadline_defined = true;
-  if (accepts && m.pending_offer === 'confirm') {
-    m.responsibility_confirmed = true;
-    m.agreement_reached = true;
-  }
-  return m;
+  const slots = { ...memory.slots };
+  if (a.deliverable && a.signals.request === 1) slots.deliverable = a.deliverable;
+  if (a.partial) slots.partial = a.partial;
+  // A time only counts as the deadline when a deadline flag accepted it
+  // ("esta semana entrego otra cosa" is not a date for this task).
+  const deadlineCounts = cfg.flags.some(
+    (f) => f.from.includes('deadline') && !(f.unless?.some((u) => a.signals[u])) && !(f.needsGoodwill && attacking),
+  );
+  if (a.deadline && deadlineCounts) slots.deadline = a.deadline;
+  if (a.partialWhen && deadlineCounts) slots.partialWhen = a.partialWhen;
+  return { ...memory, flags, slots };
 }
 
-export function taskStatus(m: Memory, previous: TaskStatus): TaskStatus {
-  const order: TaskStatus[] = ['not_started', 'need_clarified', 'partial_offer', 'timeline_proposed', 'agreement'];
-  let next: TaskStatus = 'not_started';
-  if (m.request_clarity) next = 'need_clarified';
-  if (m.partial_delivery_proposed) next = 'partial_offer';
-  if (m.deadline_defined) next = 'timeline_proposed';
-  if (m.agreement_reached) next = 'agreement';
-  // The task only moves forward.
+/** The furthest stage reached; the task never moves back. */
+export function taskStage(cfg: V2CaseConfig, flags: Memory['flags'], previous: string): string {
+  const order = ['not_started', ...cfg.stages.map((s) => s.id)];
+  let next = 'not_started';
+  for (const s of cfg.stages) if (flags[s.flag]) next = s.id;
   return order.indexOf(next) > order.indexOf(previous) ? next : previous;
 }

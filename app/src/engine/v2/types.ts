@@ -4,62 +4,42 @@ import type { CriteriaScores } from '../score';
  * The memory-driven engine ("v2"). Five independent parts, so the analyzer can
  * later be swapped for an API without touching the rest:
  *   analyzer → memory → state (task + communication) → character → evaluator.
+ * Everything specific to a case (its signals, what the character remembers,
+ * how its mood moves, what it says) lives in that case's config.
  */
 
-/** What a message does, detected by rules (strength 0.5 = partial, 1 = clear). */
-export type V2Signal =
-  | 'empathy'
-  | 'gratitude'
-  | 'urgency'
-  | 'impact'
-  | 'request'
-  | 'partial'
-  | 'deadline'
-  | 'agreement'
-  | 'responsibility'
-  | 'affirm'
-  | 'question'
-  | 'pressure'
-  | 'blame'
-  | 'hostile'
-  | 'shouting'
-  | 'vague'
-  | 'short';
+/** A signal id: the common ones below plus any a case adds. */
+export type V2Signal = string;
 
 export type Analysis = {
-  signals: Partial<Record<V2Signal, number>>;
+  /** Signal → strength (0.5 = partial, 1 = clear). */
+  signals: Record<V2Signal, number>;
   /** "los datos de ventas", as the participant wrote it. */
   deliverable?: string;
   /** "mañana a las 11", as the participant wrote it. */
   deadline?: string;
-  /** Normalised description of a partial delivery, in the colleague's voice ("lo que ya tengo validado"). */
+  /** A partial delivery, in the character's voice ("lo que ya tengo validado"). */
   partial?: string;
-  /** When two times are given, the first is for the partial delivery ("hoy", "antes de las 4"). */
+  /** When two times are given, the first is for the partial delivery ("hoy"). */
   partialWhen?: string;
   words: number;
 };
 
+export type Slots = { deliverable?: string; deadline?: string; partial?: string; partialWhen?: string };
+
 export type Memory = {
-  urgency_explained: boolean;
-  impact_explained: boolean;
-  empathy_shown: boolean;
-  request_clarity: boolean;
-  partial_delivery_proposed: boolean;
-  deadline_defined: boolean;
-  responsibility_confirmed: boolean;
-  agreement_reached: boolean;
-  /** Needs the character already asked about, in order (never asked twice the same way). */
+  /** What the character has understood so far; flags only ever turn on. */
+  flags: Record<string, boolean>;
+  /** Needs the character already asked about, in order. */
   asked_topics: string[];
-  /** How many times each topic has been asked. */
+  /** How many times each need has been asked. */
   ask_count: Record<string, number>;
   /** Ids of every line the character already said. */
   used_responses: string[];
-  /** What the character offered last turn, waiting for a yes. */
-  pending_offer: 'partial' | 'deadline' | 'confirm' | null;
-  slots: { deliverable?: string; deadline?: string; partial?: string; partialWhen?: string };
+  /** The offer on the table, waiting for a yes (its id). */
+  pending_offer: string | null;
+  slots: Slots;
 };
-
-export type TaskStatus = 'not_started' | 'need_clarified' | 'partial_offer' | 'timeline_proposed' | 'agreement';
 
 export type Character = {
   stress: number;
@@ -72,14 +52,17 @@ export type RelationshipState = 'collaborative' | 'tense' | 'deteriorated';
 
 export type Quadrant = 'effective' | 'good_no_deal' | 'deal_with_friction' | 'deteriorated';
 
+/** How the talk ended: 'agreement', 'deteriorated', or one of the case's own endings. */
+export type Closing = string;
+
 export type V2State = {
   turn: number;
   memory: Memory;
-  task: TaskStatus;
+  /** Furthest stage of the task reached (from the case's `stages`). */
+  task: string;
   character: Character;
   relationship: RelationshipState;
-  /** Running criteria totals, to average at the end. */
   criteriaSum: CriteriaScores;
   finished: boolean;
-  closing: 'agreement' | 'last_adjustment' | 'cannot_commit' | 'deteriorated' | null;
+  closing: Closing | null;
 };

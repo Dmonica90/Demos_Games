@@ -6,15 +6,15 @@ import type { SignalId } from '../signals';
 import { analyze } from './analyzer';
 import { isGuarded, relationship, updateCharacter } from './character';
 import { fill } from './config';
-import type { Line, Need, ReactionId, Tone, V2CaseConfig } from './config';
-import { emptyMemory, taskStatus, updateMemory } from './memory';
+import type { Line, Need, Tone, V2CaseConfig } from './config';
+import { emptyMemory, taskStage, updateMemory } from './memory';
 import { scoreMessage } from './scoring';
-import type { Analysis, Memory, Quadrant, V2State } from './types';
+import type { Analysis, Closing, Memory, Quadrant, V2State } from './types';
 
 export function initialState(cfg: V2CaseConfig): V2State {
   return {
     turn: 0,
-    memory: emptyMemory(),
+    memory: emptyMemory(cfg),
     task: 'not_started',
     character: { ...cfg.character },
     relationship: 'collaborative',
@@ -33,33 +33,32 @@ function pickTone(tone: Tone, guarded: boolean, used: string[]): Line {
   return pickLine(guarded && tone.guarded.length ? tone.guarded : tone.normal, used);
 }
 
-/** What the colleague reacts to: the strongest thing that is new this turn. */
-function reactionFor(a: Analysis, before: Memory, after: Memory, accepted: boolean): ReactionId | null {
-  const s = a.signals;
-  if (s.hostile) return 'hostile';
-  if (s.blame) return 'blame';
-  if (s.pressure && !s.empathy) return 'pressure';
-  if (accepted) return 'accept';
-  if (after.partial_delivery_proposed && !before.partial_delivery_proposed) return 'partial';
-  if (after.impact_explained && !before.impact_explained) return 'impact';
-  if (after.empathy_shown && !before.empathy_shown) return 'empathy';
-  if (after.urgency_explained && !before.urgency_explained) return 'urgency';
-  if (after.request_clarity && !before.request_clarity) return 'request';
-  if (after.deadline_defined && !before.deadline_defined) return 'deadline';
-  return null;
-}
-
-/** The first unmet need. Already-asked needs are asked again only in a new way. */
+/** The first unmet need. */
 export function identifyNextNeed(cfg: V2CaseConfig, m: Memory): Need | null {
-  return cfg.needs.find((n) => !n.met(m)) ?? null;
+  return cfg.needs.find((n) => !n.met(m.flags)) ?? null;
 }
 
-function categorize(a: Analysis, accepted: boolean): Category {
-  const s = a.signals;
-  if (s.hostile || s.blame || s.shouting || (s.pressure && !s.empathy)) return 'escalate';
-  if (accepted) return 'effective';
-  if (s.vague) return 'unclear';
-  return 'effective';
+function escalates(cfg: V2CaseConfig, a: Analysis): string | null {
+  const hit = cfg.escalating.find((e) => a.signals[e.signal] && !e.unless?.some((u) => a.signals[u]));
+  return hit?.signal ?? null;
+}
+
+/** What the character reacts to: the first rule of the case that applies. */
+function reactionFor(
+  cfg: V2CaseConfig,
+  a: Analysis,
+  before: Memory,
+  after: Memory,
+  accepted: boolean,
+): { id: string; hostile: boolean } | null {
+  for (const r of cfg.reactionOrder) {
+    if ('signal' in r && a.signals[r.signal] && !r.unless?.some((u) => a.signals[u])) {
+      return { id: r.reaction, hostile: cfg.escalating.some((e) => e.signal === r.signal) };
+    }
+    if ('accepted' in r && accepted) return { id: r.reaction, hostile: false };
+    if ('newFlag' in r && after.flags[r.newFlag] && !before.flags[r.newFlag]) return { id: r.reaction, hostile: false };
+  }
+  return null;
 }
 
 function nextColor(prev: Color, category: Category, rel: V2State['relationship'], points: number): Color {
@@ -86,7 +85,7 @@ export type V2Step = {
 };
 
 /**
- * One turn: analyse → remember → update the problem and the colleague →
+ * One turn: analyse → remember → update the problem and the character →
  * decide what is still missing → answer without repeating → score.
  */
 export function processParticipantMessage(
@@ -95,53 +94,59 @@ export function processParticipantMessage(
   text: string,
   prev: { points: number; color: Color },
 ): V2Step {
-  const a = analyze(text);
+  const a = analyze(text, cfg.families, cfg.concrete);
   const s = a.signals;
-  const escalation = Boolean(s.hostile || s.blame || (s.pressure && !s.empathy));
+  for (const rule of cfg.suppress ?? []) if (rule.when.some((w) => s[w])) delete s[rule.signal];
+  const escalation = escalates(cfg, a);
 
-  // 1–2. Memory.
+  // 1–2. Memory, and a "yes" to the offer on the table.
   const before = state.memory;
-  let memory = updateMemory(before, a, Boolean(s.hostile));
-  const accepted =
-    before.pending_offer !== null &&
-    !escalation &&
-    ((before.pending_offer === 'partial' && memory.partial_delivery_proposed && !before.partial_delivery_proposed) ||
-      (before.pending_offer === 'deadline' && memory.deadline_defined && !before.deadline_defined) ||
-      (before.pending_offer === 'confirm' && memory.agreement_reached));
+  let memory = updateMemory(cfg, before, a, Boolean(escalation));
+  let accepted = false;
+  // Only a yes accepts ("gracias" alone is politeness, not a commitment).
+  if (before.pending_offer && !escalation && (s.affirm || s.agreement)) {
+    const offer =
+      cfg.needs.find((n) => n.offer?.id === before.pending_offer)?.offer ??
+      cfg.needs.find((n) => n.confirm?.id === before.pending_offer)?.confirm;
+    if (offer) {
+      accepted = true;
+      memory = { ...memory, flags: { ...memory.flags, ...Object.fromEntries(offer.sets.map((f) => [f, true])) } };
+    }
+  }
   if (accepted) {
     // A short "sí" to an offer is a complete answer, not a vague one.
     delete s.short;
     delete s.vague;
   }
 
-  // 3–5. Problem, colleague, relationship.
-  const planTookShape =
-    memory.deadline_defined && memory.partial_delivery_proposed && !(before.deadline_defined && before.partial_delivery_proposed);
-  const character = updateCharacter(state.character, a, planTookShape);
+  // 3–5. Problem, character, relationship.
+  const wasReady = cfg.planReady(before.flags);
+  const character = updateCharacter(cfg, state.character, a, cfg.planReady(memory.flags) && !wasReady);
   const rel = relationship(character);
   const guarded = isGuarded(character);
   const turn = state.turn + 1;
 
-  // A complete plan the participant asks to confirm, or settles on the last
-  // turn, is accepted by a colleague who is still willing.
-  const planReady = memory.deadline_defined && (memory.partial_delivery_proposed || memory.request_clarity);
+  // A ready plan closes when the participant settles it, or on the last turn,
+  // if the character is still willing.
   const willing = rel !== 'deteriorated' && character.willingness >= 55 && !escalation;
-  // Only an explicit "quedamos / ¿te parece bien?" closes early; otherwise the
-  // colleague first sums up the plan and asks to confirm it.
-  if (!memory.agreement_reached && planReady && willing && (s.agreement || turn >= cfg.maxTurns)) {
-    memory = { ...memory, agreement_reached: true, responsibility_confirmed: true };
+  if (
+    !memory.flags[cfg.agreementFlag] &&
+    cfg.planReady(memory.flags) &&
+    willing &&
+    (cfg.closers.some((c) => s[c]) || turn >= cfg.maxTurns)
+  ) {
+    memory = { ...memory, flags: { ...memory.flags, [cfg.agreementFlag]: true } };
   }
-  const task = taskStatus(memory, state.task);
+  const task = taskStage(cfg, memory.flags, state.task);
 
-  // 6–7. What to say.
+  // 6–7. What to say: a reaction to what is new, then the next step.
   const used = [...memory.used_responses];
   const said: Line[] = [];
-  let pending: Memory['pending_offer'] = null;
-  let closing: V2State['closing'] = null;
+  let pending: string | null = null;
+  let closing: Closing | null = null;
+  const reaction = reactionFor(cfg, a, before, memory, accepted);
 
-  const reaction = reactionFor(a, before, memory, accepted);
-
-  if (memory.agreement_reached) {
+  if (memory.flags[cfg.agreementFlag]) {
     closing = 'agreement';
     said.push(pickTone(cfg.closings.agreement, guarded || rel !== 'collaborative', used));
   } else if (rel === 'deteriorated') {
@@ -149,26 +154,30 @@ export function processParticipantMessage(
     said.push(
       closing
         ? pickTone(cfg.closings.deteriorated, true, used)
-        : pickTone(cfg.reactions[reaction && ['hostile', 'blame', 'pressure'].includes(reaction) ? reaction : 'blame'], true, used),
+        : pickTone(cfg.reactions[reaction?.hostile ? reaction.id : cfg.brokenReaction], true, used),
     );
   } else if (turn >= cfg.maxTurns) {
-    if (reaction) said.push(pickTone(cfg.reactions[reaction], guarded, used));
-    closing = memory.deadline_defined || memory.partial_delivery_proposed ? 'last_adjustment' : 'cannot_commit';
+    if (reaction) said.push(pickTone(cfg.reactions[reaction.id], guarded, used));
+    closing = cfg.lastClosing(memory.flags);
     said.push(pickTone(cfg.closings[closing], guarded, used));
   } else {
-    if (reaction) said.push(pickTone(cfg.reactions[reaction], guarded, used));
-    const escalated = reaction === 'hostile' || reaction === 'blame' || reaction === 'pressure';
-    const need = identifyNextNeed(cfg, memory);
-    if (need && !(escalated && guarded)) {
+    if (reaction) said.push(pickTone(cfg.reactions[reaction.id], guarded, used));
+    const hostile = Boolean(reaction?.hostile);
+    const quiet = reaction ? cfg.quietReactions?.includes(reaction.id) : false;
+    const need = quiet ? null : identifyNextNeed(cfg, memory);
+    if (need && !(hostile && guarded)) {
       const count = memory.ask_count[need.id] ?? 0;
-      const offer = need.offer && !escalated && need.offer.when(character, memory) ? need.offer : null;
+      const offer = need.offer && !hostile && need.offer.when(character, memory.flags) ? need.offer : null;
       if (offer && !offer.lines.every((l) => used.includes(l.id))) {
         said.push(pickLine(offer.lines, used));
-        pending = offer.pending;
+        pending = offer.id;
         if (offer.fills) memory = { ...memory, slots: { ...offer.fills, ...memory.slots } };
       } else {
-        said.push(need.ask[Math.min(count, need.ask.length - 1)]);
-        if (need.id === 'confirm') pending = 'confirm';
+        // Ask again only in a way not used yet; otherwise say something else.
+        const ask = [need.ask[count], ...need.ask].find((l) => l && !used.includes(l.id));
+        const line = ask ?? cfg.stall.find((l) => !used.includes(l.id));
+        if (line) said.push(line);
+        if (need.confirm && ask) pending = need.confirm.id;
       }
       memory = {
         ...memory,
@@ -182,10 +191,16 @@ export function processParticipantMessage(
   memory = { ...memory, used_responses: [...used, ...said.map((l) => l.id)], pending_offer: pending };
 
   // 9. Score.
-  const category = categorize(a, accepted);
-  const scores = scoreMessage(a);
+  const category: Category =
+    escalation || s.shouting
+      ? 'escalate'
+      : accepted
+        ? 'effective'
+        : s.vague || cfg.unclear?.some((u) => s[u])
+          ? 'unclear'
+          : 'effective';
+  const scores = scoreMessage(a, cfg.aliases);
   const q = quality(scores);
-  // Saying yes to a good offer never costs points.
   const delta = accepted ? Math.max(0, pointsDelta(q, category)) : pointsDelta(q, category);
   const points = Math.max(0, Math.min(100, prev.points + delta));
   const color = nextColor(prev.color, category, rel, points);
@@ -195,26 +210,17 @@ export function processParticipantMessage(
   // 10. Finished?
   const done = closing !== null;
   return {
-    state: {
-      turn,
-      memory,
-      task,
-      character,
-      relationship: rel,
-      criteriaSum,
-      finished: done,
-      closing,
-    },
+    state: { turn, memory, task, character, relationship: rel, criteriaSum, finished: done, closing },
     reply,
     category,
-    signals: Object.keys(s).filter((k) => (s as Record<string, number>)[k] > 0) as SignalId[],
+    signals: Object.keys(s).filter((k) => s[k] > 0) as SignalId[],
     scores,
     quality: q,
     delta,
     color,
     points,
     done,
-    mission: memory.agreement_reached,
+    mission: memory.flags[cfg.agreementFlag],
   };
 }
 

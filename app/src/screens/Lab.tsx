@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { CASE_BY_ID } from '../cases';
+import { CASES, CASE_BY_ID } from '../cases';
+import type { CaseId } from '../cases/types';
 import { Brand, COLOR_LABEL, COLOR_TEXT, ScoreBar } from '../components/game';
 import { Button } from '../components/ui';
 import { reply, start } from '../engine/conversation';
@@ -8,10 +9,9 @@ import type { Conversation } from '../engine/conversation';
 import { QUADRANT_LABEL } from '../engine/v2/engine';
 import { Transcript } from './Transcript';
 
-const def = CASE_BY_ID.entrega;
-
-/** The five test answers from the engine design. */
-const SAMPLES: { label: string; text: string }[] = [
+/** Test answers per case: the five from the engine design for case 1, and five typical ones for 2 and 3. */
+const SAMPLES: Record<CaseId, { label: string; text: string }[]> = {
+  entrega: [
   {
     label: 'Empática y concreta',
     text: 'Entiendo que estés saturado. Para cerrar el proyecto necesito los datos de ventas. ¿Puedes enviarme lo que ya está validado hoy y completar el resto mañana a las 11?',
@@ -23,17 +23,30 @@ const SAMPLES: { label: string; text: string }[] = [
     text: 'Necesito los datos de ventas para cerrar el reporte del cliente. ¿Me envías lo que tengas antes de las 4 y el resto mañana a primera hora?',
   },
   { label: 'Empática sin acuerdo', text: 'Entiendo que tienes mucha carga, gracias por avisarme.' },
-];
-
-const MEMORY_LABEL: Record<string, string> = {
-  urgency_explained: 'Urgencia explicada',
-  impact_explained: 'Impacto explicado',
-  empathy_shown: 'Mostró empatía',
-  request_clarity: 'Pidió algo concreto',
-  partial_delivery_proposed: 'Entrega parcial',
-  deadline_defined: 'Fecha definida',
-  responsibility_confirmed: 'Responsable claro',
-  agreement_reached: 'Acuerdo',
+  ],
+  urgente: [
+    {
+      label: 'Expone carga y prioriza',
+      text: 'Con gusto apoyo, pero ya tengo dos entregables en curso para esta semana y me preocupa que alguno se retrase. ¿Cuál prefieres que priorice?',
+    },
+    { label: 'Acepta sin explicar', text: 'Sí claro, sin problema, mañana lo tienes.' },
+    { label: '"No puedo" seco', text: 'No puedo, no me toca.' },
+    { label: 'Propone opciones', text: 'Te propongo mover el reporte mensual al lunes y entregarte lo nuevo mañana a mediodía.' },
+    { label: 'Ambigua', text: 'Ok, a ver.' },
+  ],
+  mejorar: [
+    {
+      label: 'Hechos y escucha',
+      text: 'Valoro tu esfuerzo. En los últimos tres reportes encontré errores en las cifras que generaron retrabajo al equipo. ¿Cómo lo ves tú?',
+    },
+    { label: 'Etiqueta', text: 'Eres muy descuidado, siempre te equivocas.' },
+    { label: 'Evita el tema', text: 'No te preocupes, no es tan importante, sigue así.' },
+    {
+      label: 'Acciones y apoyo',
+      text: 'Podemos usar una lista de verificación antes de enviar y te apoyo la primera semana.',
+    },
+    { label: 'Seguimiento', text: 'Revisemos cómo vas el próximo viernes.' },
+  ],
 };
 
 const CHARACTER_LABEL: Record<string, string> = {
@@ -48,9 +61,16 @@ const CHARACTER_LABEL: Record<string, string> = {
  * colleague's mood and the task move with every message. Nothing is saved.
  */
 export function Lab() {
-  const [convo, setConvo] = useState<Conversation>(() => start(def, Date.now()));
+  const [caseId, setCaseId] = useState<CaseId>('entrega');
+  const def = CASE_BY_ID[caseId];
+  const [convo, setConvo] = useState<Conversation>(() => start(CASE_BY_ID.entrega, Date.now()));
   const [text, setText] = useState('');
   const v2 = convo.v2!;
+  const choose = (id: CaseId) => {
+    setCaseId(id);
+    setConvo(start(CASE_BY_ID[id], Date.now()));
+    setText('');
+  };
 
   const send = (message: string) => {
     if (!message.trim() || convo.done) return;
@@ -69,7 +89,22 @@ export function Lab() {
         <h1 className="mt-2 text-3xl">
           Laboratorio · <span className="text-brand">{def.title}</span>
         </h1>
-        <p className="mt-2 text-sm">
+        <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Caso">
+          {CASES.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              aria-pressed={c.id === caseId}
+              onClick={() => choose(c.id)}
+              className={`rounded-full border-2 px-4 py-1.5 text-sm font-semibold ${
+                c.id === caseId ? 'border-accent bg-accent-soft text-accent-deep' : 'border-edge bg-panel text-ink'
+              }`}
+            >
+              Caso {c.number}: {c.title}
+            </button>
+          ))}
+        </div>
+        <p className="mt-3 text-sm">
           Prueba el motor como participante y mira cómo cambian la memoria, el estado de la tarea y el ánimo de{' '}
           {def.partner.name}. Nada se guarda.
         </p>
@@ -109,7 +144,7 @@ export function Lab() {
         </form>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          {SAMPLES.map((s) => (
+          {SAMPLES[caseId].map((s) => (
             <button
               key={s.label}
               type="button"
@@ -120,7 +155,7 @@ export function Lab() {
               {s.label}
             </button>
           ))}
-          <Button tone="ghost" onClick={() => setConvo(start(def, Date.now()))} className="!min-h-8 !px-4 !py-1 text-xs">
+          <Button tone="ghost" onClick={() => choose(caseId)} className="!min-h-8 !px-4 !py-1 text-xs">
             Reiniciar
           </Button>
         </div>
@@ -130,8 +165,8 @@ export function Lab() {
         <section className="card p-5">
           <p className="eyebrow">Memoria · turno {v2.turn}/{def.maxTurns}</p>
           <ul className="mt-3 grid grid-cols-2 gap-2 text-sm">
-            {Object.entries(MEMORY_LABEL).map(([k, label]) => {
-              const on = v2.memory[k as keyof typeof v2.memory] === true;
+            {def.v2.flags.map(({ id: k, label }) => {
+              const on = v2.memory.flags[k] === true;
               return (
                 <li
                   key={k}
