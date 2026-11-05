@@ -55,4 +55,18 @@ export const NEGATIVE: SignalId[] = [
   'label',
 ];
 
+/** What to do instead, for the most common mistake on the results screen. */
+export const SIGNAL_TIP: Partial<Record<SignalId, string>> = {
+  blame: 'Describe el impacto de lo que pasó en lugar de buscar culpables.',
+  pressure: 'Explica por qué es importante y pregunta qué necesita la otra persona.',
+  hostile: 'Critica el trabajo, nunca a la persona. Un insulto cierra cualquier conversación.',
+  shouting: 'Escribe en minúsculas: las mayúsculas se leen como gritos.',
+  vague: 'Di qué necesitas, para cuándo y por qué, en una o dos frases completas.',
+  short: 'Un mensaje de una o dos palabras no da contexto: explica y propone.',
+  reject: 'En lugar de "no puedo", explica tu carga y propone una alternativa.',
+  blind_accept: 'Antes de decir que sí, explica qué tienes en curso y qué se pondría en riesgo.',
+  avoid: 'Nombra el problema con hechos concretos; evitarlo no ayuda a la otra persona a mejorar.',
+  label: 'Describe hechos ("en los últimos reportes…"), no etiquetes a la persona ("eres descuidado").',
+};
+
 export const POSITIVE: SignalId[] = (Object.keys(LABELS) as SignalId[]).filter((s) => !NEGATIVE.includes(s));

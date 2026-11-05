@@ -24,17 +24,25 @@ export function initialState(cfg: V2CaseConfig): V2State {
   };
 }
 
-/** First line of the pool not said yet (or the last one, if all were used). */
-function pickLine(pool: Line[], used: string[]): Line {
-  return pool.find((l) => !used.includes(l.id)) ?? pool[pool.length - 1];
+const fits = (l: Line, m: Memory) => !l.when || l.when(m);
+
+/** First line of the pool that fits and was not said yet (else the first that fits). */
+function pickLine(pool: Line[], used: string[], m: Memory): Line {
+  const ok = pool.filter((l) => fits(l, m));
+  const from = ok.length ? ok : pool;
+  return from.find((l) => !used.includes(l.id)) ?? from[from.length - 1];
 }
 
-function pickTone(tone: Tone, guarded: boolean, used: string[]): Line {
-  return pickLine(guarded && tone.guarded.length ? tone.guarded : tone.normal, used);
+function pickTone(tone: Tone, guarded: boolean, used: string[], m: Memory): Line {
+  return pickLine(guarded && tone.guarded.length ? tone.guarded : tone.normal, used, m);
 }
 
-/** The first unmet need. */
+/** The first unmet need; once the plan is ready, straight to confirming it. */
 export function identifyNextNeed(cfg: V2CaseConfig, m: Memory): Need | null {
+  if (cfg.planReady(m.flags)) {
+    const confirm = cfg.needs.find((n) => n.confirm && !n.met(m.flags));
+    if (confirm) return confirm;
+  }
   return cfg.needs.find((n) => !n.met(m.flags)) ?? null;
 }
 
@@ -148,20 +156,25 @@ export function processParticipantMessage(
 
   if (memory.flags[cfg.agreementFlag]) {
     closing = 'agreement';
-    said.push(pickTone(cfg.closings.agreement, guarded || rel !== 'collaborative', used));
+    said.push(pickTone(cfg.closings.agreement, guarded || rel !== 'collaborative', used, memory));
   } else if (rel === 'deteriorated') {
     closing = turn >= cfg.maxTurns || character.defensiveness >= 85 ? 'deteriorated' : null;
     said.push(
       closing
-        ? pickTone(cfg.closings.deteriorated, true, used)
-        : pickTone(cfg.reactions[reaction?.hostile ? reaction.id : cfg.brokenReaction], true, used),
+        ? pickTone(cfg.closings.deteriorated, true, used, memory)
+        : pickTone(cfg.reactions[reaction?.hostile ? reaction.id : cfg.brokenReaction], true, used, memory),
     );
   } else if (turn >= cfg.maxTurns) {
-    if (reaction) said.push(pickTone(cfg.reactions[reaction.id], guarded, used));
+    if (reaction) said.push(pickTone(cfg.reactions[reaction.id], guarded, used, memory));
     closing = cfg.lastClosing(memory.flags);
-    said.push(pickTone(cfg.closings[closing], guarded, used));
+    said.push(pickTone(cfg.closings[closing], guarded, used, memory));
   } else {
-    if (reaction) said.push(pickTone(cfg.reactions[reaction.id], guarded, used));
+    if (reaction) said.push(pickTone(cfg.reactions[reaction.id], guarded, used, memory));
+    // A long message the rules could not read is still acknowledged, never ignored.
+    else if (a.words >= 8 && !s.vague && !escalation) {
+      const ack = cfg.acknowledge.find((l) => !used.includes(l.id));
+      if (ack) said.push(ack);
+    }
     const hostile = Boolean(reaction?.hostile);
     const quiet = reaction ? cfg.quietReactions?.includes(reaction.id) : false;
     const need = quiet ? null : identifyNextNeed(cfg, memory);
@@ -169,12 +182,12 @@ export function processParticipantMessage(
       const count = memory.ask_count[need.id] ?? 0;
       const offer = need.offer && !hostile && need.offer.when(character, memory.flags) ? need.offer : null;
       if (offer && !offer.lines.every((l) => used.includes(l.id))) {
-        said.push(pickLine(offer.lines, used));
+        said.push(pickLine(offer.lines, used, memory));
         pending = offer.id;
         if (offer.fills) memory = { ...memory, slots: { ...offer.fills, ...memory.slots } };
       } else {
         // Ask again only in a way not used yet; otherwise say something else.
-        const ask = [need.ask[count], ...need.ask].find((l) => l && !used.includes(l.id));
+        const ask = [need.ask[count], ...need.ask].find((l) => l && !used.includes(l.id) && fits(l, memory));
         const line = ask ?? cfg.stall.find((l) => !used.includes(l.id));
         if (line) said.push(line);
         if (need.confirm && ask) pending = need.confirm.id;

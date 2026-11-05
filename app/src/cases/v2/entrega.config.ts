@@ -1,4 +1,12 @@
 import type { V2CaseConfig } from '../../engine/v2/config';
+import type { Memory } from '../../engine/v2/types';
+
+/** There is a real delivery in parts: something first, the rest at another time. */
+const inParts = (m: Memory) =>
+  m.flags.partial_delivery_proposed && (!m.slots.partialWhen || m.slots.partialWhen !== m.slots.deadline);
+const whole = (m: Memory) => !inParts(m);
+const named = (m: Memory) => inParts(m) && Boolean(m.slots.deliverable);
+const unnamed = (m: Memory) => inParts(m) && !m.slots.deliverable;
 
 /**
  * Caso 1 · La entrega pendiente — on the memory engine.
@@ -10,6 +18,10 @@ import type { V2CaseConfig } from '../../engine/v2/config';
 export const entregaConfig: V2CaseConfig = {
   maxTurns: 3,
   character: { stress: 70, trust: 60, defensiveness: 20, willingness: 70 },
+  acknowledge: [
+    { id: 'ack-1', text: 'Ok, te escucho.' },
+    { id: 'ack-2', text: 'Va, entiendo.' },
+  ],
   stall: [
     { id: 'stall-1', text: 'Ok… dime qué necesitas y veo cómo me organizo.' },
     { id: 'stall-2', text: 'Mmm, sigo sin tener claro cómo quieres que lo resolvamos.' },
@@ -125,7 +137,9 @@ export const entregaConfig: V2CaseConfig = {
       met: (f) => f.agreement_reached,
       confirm: { id: 'confirm', sets: ['agreement_reached', 'responsibility_confirmed'] },
       ask: [
-        { id: 'confirm-1', text: 'Entonces quedamos así: te mando {partial} {partialWhen} y el resto {deadline}. ¿Va?' },
+        { id: 'confirm-1n', when: named, text: 'Entonces quedamos así: te mando {deliverable} {partialWhen} y lo demás {deadline}. ¿Va?' },
+        { id: 'confirm-1', when: unnamed, text: 'Entonces quedamos así: te mando {partial} {partialWhen} y el resto {deadline}. ¿Va?' },
+        { id: 'confirm-1w', when: whole, text: 'Entonces quedamos así: te mando {deliverable} {deadline}. ¿Va?' },
         { id: 'confirm-2', text: 'Solo para confirmar: ¿te late que quede así, con el resto {deadline}?' },
       ],
     },
@@ -225,9 +239,23 @@ export const entregaConfig: V2CaseConfig = {
   closings: {
     agreement: {
       normal: [
-        { id: 'end-ok-1', text: 'Listo: te mando {partial} {partialWhen} y el resto {deadline}. Gracias por ayudarme a aterrizarlo.' },
+        {
+          id: 'end-ok-1n',
+          when: named,
+          text: 'Listo: te mando {deliverable} {partialWhen} y lo demás {deadline}. Gracias por ayudarme a aterrizarlo.',
+        },
+        {
+          id: 'end-ok-1',
+          when: unnamed,
+          text: 'Listo: te mando {partial} {partialWhen} y el resto {deadline}. Gracias por ayudarme a aterrizarlo.',
+        },
+        { id: 'end-ok-1w', when: whole, text: 'Listo: te mando {deliverable} {deadline}, sin falta. Gracias por ayudarme a aterrizarlo.' },
       ],
-      guarded: [{ id: 'end-ok-g1', text: 'Ok, quedamos así: {partial} {partialWhen} y el resto {deadline}. Lo cumplo.' }],
+      guarded: [
+        { id: 'end-ok-g1n', when: named, text: 'Ok, quedamos así: {deliverable} {partialWhen} y lo demás {deadline}. Lo cumplo.' },
+        { id: 'end-ok-g1', when: unnamed, text: 'Ok, quedamos así: {partial} {partialWhen} y el resto {deadline}. Lo cumplo.' },
+        { id: 'end-ok-g1w', when: whole, text: 'Ok, quedamos así: {deliverable} {deadline}. Lo cumplo.' },
+      ],
     },
     last_adjustment: {
       normal: [

@@ -31,8 +31,20 @@ export function updateMemory(cfg: V2CaseConfig, memory: Memory, a: Analysis, att
   const deadlineCounts = cfg.flags.some(
     (f) => f.from.includes('deadline') && !(f.unless?.some((u) => a.signals[u])) && !(f.needsGoodwill && attacking),
   );
-  if (a.deadline && deadlineCounts) slots.deadline = a.deadline;
-  if (a.partialWhen && deadlineCounts) slots.partialWhen = a.partialWhen;
+  const sameDay = (t: string) => !/ma[nñ]ana|lunes|martes|mi[eé]rcoles|jueves|viernes|semana|d[ií]as?/i.test(t);
+  if (deadlineCounts && a.times.length > 1 && a.signals.partial) {
+    // "lo validado hoy y el resto mañana": first time for the part, last for the rest.
+    slots.partialWhen = a.partialWhen;
+    slots.deadline = a.deadline;
+  } else if (deadlineCounts && a.deadline) {
+    const last = a.times[a.times.length - 1];
+    if (flags.partial_delivery_proposed && slots.partialWhen && sameDay(last) && !sameDay(slots.deadline ?? '')) {
+      // A time of day after a plan in parts tightens the first part ("antes de las dos").
+      slots.partialWhen = last;
+    } else {
+      slots.deadline = a.deadline;
+    }
+  }
   return { ...memory, flags, slots };
 }
 

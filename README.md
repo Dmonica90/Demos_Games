@@ -14,17 +14,16 @@ supabase/migrations/       Base de datos y tiempo real (Supabase).
 
 Cómo correrlo, cómo funciona y cómo editar los casos: [`app/README.md`](app/README.md).
 
-**Direcciones** (una vez que el repositorio se llame `demo`):
+**Direcciones** (publicado en Vercel; cada merge a `main` se publica solo):
 
 | Para | URL |
 | --- | --- |
-| Host (proyectar) | `https://dmonica90.github.io/demo/` |
-| Participantes | las abre el QR (`…/demo/#/jugar/CODIGO`) |
-| Laboratorio del motor | `https://dmonica90.github.io/demo/#/laboratorio` |
+| Host (proyectar) | `https://simulador-comunicacion.vercel.app/` |
+| Participantes | las abre el QR (`…/#/jugar/CODIGO`); el enlace también aparece bajo el QR |
+| Laboratorio del motor | `https://simulador-comunicacion.vercel.app/#/laboratorio` |
 
-> Al renombrar el repositorio, GitHub redirige el código pero **no** la página:
-> la dirección anterior (`…/Shield_Defense/`) deja de funcionar. Después de
-> renombrar, vuelve a publicar con **Actions → Test and deploy → Run workflow**.
+> GitHub Pages (`dmonica90.github.io/Demos_Games`) es opcional: se puede apagar en
+> **Settings → Pages → Source: None** y dejar solo Vercel.
 
 ## Usarlo en Articulate
 
@@ -32,7 +31,7 @@ El curso solo necesita mostrar la **pantalla del host**; los participantes
 juegan en su celular con el QR.
 
 - **Rise 360:** agrega un bloque **Multimedia → Embed** (o *Code*), pega
-  `https://dmonica90.github.io/demo/` y dale una altura de unos 800 px.
+  `https://simulador-comunicacion.vercel.app/` y dale una altura de unos 800 px.
 - **Storyline:** **Insert → Web Object**, pega la misma dirección. Para
   proyectar, elige *Open in a new browser window*: el QR y el dashboard se ven
   mejor a pantalla completa. *Display in slide* también funciona.

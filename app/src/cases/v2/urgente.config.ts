@@ -24,6 +24,12 @@ export const urgenteConfig: V2CaseConfig = {
       'esta semana (?:entrego|tengo|cierro)',
       'tengo que entregar',
       'comprometid\\w* para',
+      'tengo (?:una|la|las|los|otra|otras|otro|otros) (?:entrega|entregas|presentacion|presentaciones|evaluacion|evaluaciones|reporte\\w*|proyecto\\w*)',
+      'tengo que (?:hacer|terminar|mandar|preparar|cerrar|trabajar)',
+      'otros entregables',
+      'entregables pendientes',
+      'tambien (?:tengo|estoy)',
+      'trabajar (?:tambien )?(?:en )?otros',
     ),
     risk: family(
       false,
@@ -59,6 +65,11 @@ export const urgenteConfig: V2CaseConfig = {
       'otra opcion',
       'opciones',
       'si muevo',
+      'que te parece (?:esto|si)',
+      'lo termino (?:hoy|primero|manana)',
+      'primero (?:termino|hago|saco|entrego)',
+      '(?:manana|despues|luego) (?:sigo|continuo|puedo seguir|retomo)',
+      'puedo (?:terminarlo|hacerlo|entregarlo|sacarlo) (?:hoy|primero|manana)',
     ),
     decision_ask: family(
       true,
@@ -89,6 +100,10 @@ export const urgenteConfig: V2CaseConfig = {
     { signal: 'reject', when: ['capacity', 'options', 'risk'] },
   ],
   quietReactions: ['blind_accept'],
+  acknowledge: [
+    { id: 'ack-1', text: 'Ok, te escucho.' },
+    { id: 'ack-2', text: 'Va, entiendo.' },
+  ],
   stall: [
     { id: 'stall-1', text: 'Mmm, sigo sin saber cómo vas a sacar todo.' },
     { id: 'stall-2', text: 'Ayúdame: necesito una respuesta clara para avanzar.' },
@@ -156,6 +171,7 @@ export const urgenteConfig: V2CaseConfig = {
     { reaction: 'pressure', signal: 'pressure', unless: ['empathy'] },
     { reaction: 'blind_accept', signal: 'blind_accept', unless: ['capacity', 'options', 'risk'] },
     { reaction: 'accept', accepted: true },
+    // What the person proposes comes first: Mariana answers the proposal.
     { reaction: 'options', newFlag: 'options_proposed' },
     { reaction: 'capacity', newFlag: 'capacity_explained' },
     { reaction: 'risk', newFlag: 'risk_explained' },

@@ -105,7 +105,7 @@ describe('caso 3 · Necesitamos mejorar (Luis)', () => {
 
   it('si nadie le pregunta, Luis lo reclama', () => {
     const c = play('mejorar', 'En los últimos reportes vi errores en los datos de ventas que generaron retrabajo.');
-    expect(last(c)).toContain('nadie me ha preguntado');
+    expect(last(c)).toContain('nadie me había preguntado');
   });
 });
 

@@ -56,6 +56,8 @@ export const FAMILIES: Record<V2Signal, Family> = {
       'lo necesito (?:hoy|ya|pronto|para hoy)',
       'lo necesitamos',
       'hoy mismo',
+      'para hoy',
+      'antes de las',
       'el cierre',
       'estamos cerca',
     ),
@@ -74,6 +76,10 @@ export const FAMILIES: Record<V2Signal, Family> = {
       'estoy (?:detenid\\w*|atorad\\w*|frenad\\w*)',
       'para (?:poder )?(?:cerrar|terminar|avanzar|entregar|presentar)',
       'el (?:cliente|proyecto|reporte|equipo) (?:depende|espera|necesita)',
+      'tengo que (?:presentar|exponer)',
+      'tengo (?:una )?(?:presentacion|junta|reunion) (?:a las|hoy|manana|con)',
+      'presento (?:a las|hoy|manana)',
+      'lo necesito para (?:presentar|la junta|la reunion|el cliente|la presentacion)',
     ),
   },
   request: {
@@ -85,6 +91,14 @@ export const FAMILIES: Record<V2Signal, Family> = {
       'requiero',
       'me (?:puedes|podrias) (?:enviar|mandar|pasar|compartir)',
       '(?:puedes|podrias) (?:enviarme|mandarme|pasarme|compartirme)',
+      'manda(?:lo|la|los|las|me|melo|mela)',
+      'envia(?:lo|la|los|las|me|melo|mela)',
+      'pasa(?:lo|la|me|melo)',
+      'compartelo',
+      'entrega(?:lo|la|me|melo)',
+      '^(?:por favor )?(?:manda|envia|pasa|entrega|comparte)',
+      'me (?:mandas|envias|pasas|compartes|entregas)',
+      'cuando (?:puedes|podrias) (?:enviarlo|mandarlo|pasarlo|entregarlo|enviarla|mandarla)',
     ),
   },
   partial: {
@@ -102,6 +116,10 @@ export const FAMILIES: Record<V2Signal, Family> = {
       'el resto (?:despues|manana|luego|mas tarde)',
       'lo demas (?:despues|manana|luego)',
       'primero (?:la|el|lo) ',
+      '(?:la )?otra parte',
+      'la siguiente parte',
+      'el resto',
+      'lo demas',
     ),
   },
   agreement: {
@@ -112,7 +130,7 @@ export const FAMILIES: Record<V2Signal, Family> = {
       'de acuerdo',
       'trato hecho',
       'confirm\\w*',
-      'te parece (?:bien|si)',
+      'te parece bien',
       'acordamos',
       'cuento contigo',
       'me funciona',
@@ -195,11 +213,12 @@ function positiveMatch(plain: string, pattern: RegExp, negatable: boolean): bool
   return false;
 }
 
-const GENERIC = /^(?:la |el |los |las |esa |ese |esos |esas |tu |tus )?(?:informacion|info|datos|cosas?|eso|esto|archivo|documento|parte)$/;
+const GENERIC =
+  /^(?:la |el |los |las |esa |ese |esos |esas |tu |tus )?(?:informacion|info|datos|cosas?|eso|esto|archivo|documento|parte|otra|otro|resto|demas)$/;
 
-/** Extracted on lower-cased original text, so accents survive for display. */
+/** Extracted from the original text (case-insensitive), so names keep their capitals and accents. */
 const DELIVERABLE =
-  /(?:necesito|me falta|me hace falta|requiero|enviarme|mandarme|pasarme|compartirme|enviar|mandar|pasar|compartir)\s+((?:los|las|el|la|esos|esas|ese|esa|tus|tu)\s+[a-záéíóúñü]+(?:\s+(?:de|del|para)\s+(?:la\s+|el\s+|los\s+|las\s+)?[a-záéíóúñü]+)?)/;
+  /(?:necesito|me falta|me hace falta|requiero|env[ií]a(?:me|r(?:me)?)?|manda(?:me|r(?:me)?)?|m[aá]ndame|pasa(?:me|r(?:me)?)?|p[aá]same|entrega(?:me|r(?:me)?)?|entr[eé]game|compart(?:e|ir)(?:me)?|mandes|env[ií]es|pases)\s+((?:los|las|el|la|esos|esas|ese|esa|tus|tu)\s+\p{L}+(?:\s+(?:de|del|para)\s+(?:la\s+|el\s+|los\s+|las\s+)?\p{L}+)?)/iu;
 
 const TIME_WORD = '(?:\\d{1,2}(?::\\d{2})?\\s?(?:am|pm|hrs?|horas)?|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce)';
 const DEADLINE = new RegExp(
@@ -212,6 +231,9 @@ const DEADLINE = new RegExp(
     `(?:al )?(?:final|fin) del día`,
     `(?:al )?(?:final|fin) del dia`,
     `a primera hora`,
+    `antes del? (?:lunes|martes|miércoles|miercoles|jueves|viernes|cierre|mediodía|mediodia)`,
+    `para el (?:lunes|martes|miércoles|miercoles|jueves|viernes)`,
+    `la (?:próxima|proxima|otra) semana`,
     `esta semana`,
   ].join('|'),
   'g',
@@ -234,17 +256,23 @@ export function analyze(
   const lower = text.toLowerCase();
   const signals: Analysis['signals'] = {};
 
+  const asks = /[?¿]/.test(text);
   for (const [id, fam] of Object.entries({ ...FAMILIES, ...extra })) {
+    if (fam.requiresQuestion && !asks) continue;
     if (positiveMatch(plain, fam.patterns, fam.negatable)) signals[id] = 1;
   }
 
   // "Entiendo" negated means confusion, not empathy.
   if (/\bno (?:entiendo|comprendo|se que)\b/.test(plain)) signals.vague = 1;
 
-  const deliverableMatch = lower.match(DELIVERABLE);
+  const deliverableMatch = text.match(DELIVERABLE);
   let deliverable: string | undefined;
   if (deliverableMatch) {
     deliverable = deliverableMatch[1].trim();
+    // Keep short labels that follow: "la sección A y B".
+    const after = text.slice((deliverableMatch.index ?? 0) + deliverableMatch[0].length);
+    const labels = after.match(/^\s+([A-Z0-9]{1,3}(?:\s*(?:y|,)\s*[A-Z0-9]{1,3})*)(?=[\s.,;:!?]|$)/);
+    if (labels) deliverable += ` ${labels[1]}`;
     const generic = GENERIC.test(normalize(deliverable));
     signals.request = generic ? 0.5 : 1;
   } else if (signals.request) {
@@ -279,5 +307,5 @@ export function analyze(
   if (signals.vague && hasSubstance) delete signals.vague;
   if (!signals.vague && signals.short && !signals.affirm && !hasSubstance) signals.vague = 1;
 
-  return { signals, deliverable, deadline, partial, partialWhen, words };
+  return { signals, deliverable, deadline, partial, partialWhen, times, words };
 }
