@@ -53,15 +53,16 @@ host se hablen en tiempo real usamos **Supabase** (plan gratuito).
    [`app/src/config.ts`](app/src/config.ts). Son públicos por diseño: viajan en
    la página; la seguridad la dan las reglas de la base de datos. **Nunca** pongas
    la *Secret key* (`sb_secret_…`) en el repositorio.
-5. **Settings → Pages → Source: GitHub Actions**. Cada push a `main` publica en
-   `https://dmonica90.github.io/Shield_Defense/`.
+4. **Publicación:** el proyecto `simulador-comunicacion` de Vercel está conectado
+   a este repositorio (carpeta `app`); cada merge a `main` publica en
+   `https://simulador-comunicacion.vercel.app/`.
 
 ## Cómo llega el QR al celular
 
 - El host abre el sitio, elige un caso y pulsa **Crear sesión**: se genera un
   código de 5 caracteres (p. ej. `K7P2Q`).
-- El QR apunta a `https://dmonica90.github.io/Shield_Defense/#/jugar/K7P2Q`. La
-  ruta va después de `#` para que GitHub Pages siempre sirva la misma página.
+- El QR apunta a `https://simulador-comunicacion.vercel.app/#/jugar/K7P2Q`. La
+  ruta va después de `#` para que cualquier hosting estático sirva la misma página.
 - El celular abre esa dirección, pide un nickname y aparece en la sala del host.
   Debajo del QR también se muestran el enlace y el código, para quien prefiera
   escribirlo.
