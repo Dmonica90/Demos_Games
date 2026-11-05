@@ -22,11 +22,11 @@ host se hablen en tiempo real usamos **Supabase** (plan gratuito).
 1. Crea un proyecto en [supabase.com](https://supabase.com) (región cercana, cualquier contraseña).
 2. En el proyecto: **SQL Editor → New query**, pega todo
    [`supabase/migrations/001_init.sql`](supabase/migrations/001_init.sql) y presiona **Run**.
-3. En **Project Settings → API** copia el **Project URL** y la clave **anon public**.
-4. En GitHub: **Settings → Secrets and variables → Actions → Variables** crea
-   `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` con esos valores. (Son
-   públicos por diseño: viajan en la página; la seguridad la dan las reglas de
-   la base de datos.)
+3. En **Project Settings → API Keys** copia el **Project URL** y la
+   **Publishable key** (`sb_publishable_…`) y ponlos en
+   [`app/src/config.ts`](app/src/config.ts). Son públicos por diseño: viajan en
+   la página; la seguridad la dan las reglas de la base de datos. **Nunca** pongas
+   la *Secret key* (`sb_secret_…`) en el repositorio.
 5. **Settings → Pages → Source: GitHub Actions**. Cada push a `main` publica en
    `https://dmonica90.github.io/Shield_Defense/`.
 
