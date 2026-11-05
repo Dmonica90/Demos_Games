@@ -1,4 +1,5 @@
 import type { SignalId } from '../engine/signals';
+import type { V2CaseConfig } from '../engine/v2/config';
 
 /**
  * How a message lands, following the three branches of each case's flow:
@@ -31,6 +32,12 @@ export type CaseDef = {
   opening: string;
   maxTurns: number;
   durationS: number;
+  /**
+   * When present, the case runs on the memory engine (`engine/v2`): the
+   * colleague answers to the whole conversation. `categorize`, `pieces` and
+   * `replies` are then unused.
+   */
+  v2?: V2CaseConfig;
   /** Decides which branch a message takes, from its signals. */
   categorize: (signals: Set<SignalId>) => Category;
   pieces: Piece[];

@@ -1,4 +1,6 @@
 import type { CaseDef, Category } from '../cases/types';
+import { initialState, processParticipantMessage, quadrant } from './v2/engine';
+import type { Quadrant, V2State } from './v2/types';
 import { CRITERIA, criteria, pointsDelta, quality } from './score';
 import type { CriteriaScores, CriterionId } from './score';
 import { detect } from './signals';
@@ -24,6 +26,8 @@ export type Message =
       signals: SignalId[];
       quality: number;
       delta: number;
+      /** v2 only: the five criteria for this message. */
+      scores?: CriteriaScores;
     };
 
 export type Conversation = {
@@ -40,6 +44,10 @@ export type Conversation = {
   endReason: EndReason | null;
   startedAt: number;
   finishedAt: number | null;
+  /** v2 only: memory, task, character and running scores. */
+  v2?: V2State;
+  /** v2 only: communication × mission, once finished. */
+  quadrant?: Quadrant;
 };
 
 export const START_POINTS = 100;
@@ -60,6 +68,41 @@ export function start(def: CaseDef, now: number): Conversation {
     endReason: null,
     startedAt: now,
     finishedAt: null,
+    ...(def.v2 ? { v2: initialState(def.v2) } : {}),
+  };
+}
+
+function replyV2(def: CaseDef, convo: Conversation, text: string, now: number): Conversation {
+  const cfg = def.v2!;
+  const r = processParticipantMessage(cfg, convo.v2 ?? initialState(cfg), text, {
+    points: convo.points,
+    color: convo.color,
+  });
+  const mine: Message = {
+    from: 'me',
+    text: text.trim(),
+    at: now,
+    category: r.category,
+    signals: r.signals,
+    quality: r.quality,
+    delta: r.delta,
+    scores: r.scores,
+  };
+  return {
+    ...convo,
+    stage: r.done ? 'closed' : r.state.relationship === 'collaborative' ? 'dialog' : 'defensive',
+    turn: r.state.turn,
+    points: r.points,
+    color: r.color,
+    escalations: convo.escalations + (r.category === 'escalate' ? 1 : 0),
+    pieces: [],
+    messages: [...convo.messages, mine, { from: 'partner', text: r.reply, at: now }],
+    done: r.done,
+    mission: r.mission,
+    endReason: r.done ? (r.mission ? 'agreement' : 'turns') : null,
+    finishedAt: r.done ? now : null,
+    v2: r.state,
+    quadrant: r.done ? quadrant(r.points, r.color, r.mission) : undefined,
   };
 }
 
@@ -87,6 +130,7 @@ export function analyze(def: CaseDef, text: string) {
 /** The participant sends a message; the other person answers. */
 export function reply(def: CaseDef, convo: Conversation, text: string, now: number): Conversation {
   if (convo.done || !text.trim()) return convo;
+  if (def.v2) return replyV2(def, convo, text, now);
   const a = analyze(def, text);
   const turn = convo.turn + 1;
   const points = Math.max(0, Math.min(START_POINTS, convo.points + a.delta));
@@ -177,7 +221,14 @@ export function reply(def: CaseDef, convo: Conversation, text: string, now: numb
 /** Time ran out (or the host ended the activity) before an agreement. */
 export function timeUp(convo: Conversation, now: number): Conversation {
   if (convo.done) return convo;
-  return { ...convo, stage: 'closed', done: true, endReason: 'time', finishedAt: now };
+  return {
+    ...convo,
+    stage: 'closed',
+    done: true,
+    endReason: 'time',
+    finishedAt: now,
+    ...(convo.v2 ? { quadrant: quadrant(convo.points, convo.color, convo.mission) } : {}),
+  };
 }
 
 /** Average of each criterion over the participant's messages, 0–100. */
@@ -186,7 +237,7 @@ export function criteriaAverages(def: CaseDef, convo: Conversation): CriteriaSco
   const totals: CriteriaScores = { clarity: 0, tone: 0, context: 0, assertiveness: 0, agreements: 0 };
   if (mine.length === 0) return totals;
   for (const m of mine) {
-    const s = analyze(def, m.text).scores;
+    const s = m.scores ?? analyze(def, m.text).scores;
     for (const c of CRITERIA) totals[c.id] += s[c.id];
   }
   for (const id of Object.keys(totals) as CriterionId[]) totals[id] = Math.round((totals[id] / mine.length) * 100);

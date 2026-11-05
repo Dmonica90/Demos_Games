@@ -4,6 +4,7 @@ import { Button, Dialog } from '../../components/ui';
 import { colorCounts, ranking, signalStats } from '../../engine/analysis';
 import type { Ranked } from '../../engine/analysis';
 import { SIGNAL_LABEL } from '../../engine/signals';
+import { QUADRANT_LABEL } from '../../engine/v2/engine';
 import { go } from '../../router';
 import { Transcript } from '../Transcript';
 import type { HostProps } from './props';
@@ -67,6 +68,7 @@ export function Results({ def, players }: HostProps) {
                     <span className="text-xs text-ink-dim">
                       {r.convo.mission ? '✓ Acuerdo' : '✗ Sin acuerdo'} · {r.convo.turn} turnos ·{' '}
                       <span className={COLOR_TEXT[r.convo.color]}>{COLOR_SHORT[r.convo.color]}</span>
+                      {r.convo.quadrant && <> · {QUADRANT_LABEL[r.convo.quadrant].title}</>}
                     </span>
                   </span>
                   <ScoreBar points={r.convo.points} color={r.convo.color} size="sm" label={`Barra de ${r.player.nickname}`} />

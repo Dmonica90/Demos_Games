@@ -3,6 +3,7 @@ import { Brand, COLOR_LABEL, COLOR_TEXT, ScoreBar } from '../../components/game'
 import type { Conversation } from '../../engine/conversation';
 import { criteriaAverages, finalScore } from '../../engine/conversation';
 import { CRITERIA } from '../../engine/score';
+import { QUADRANT_LABEL } from '../../engine/v2/engine';
 import type { Player } from '../../realtime';
 import { Transcript } from '../Transcript';
 
@@ -31,6 +32,12 @@ export function Done({ def, player, convo }: { def: CaseDef; player: Player; con
         )}
       </h1>
       <p className="mt-2">{END_TEXT[convo.endReason ?? 'time']}</p>
+      {convo.quadrant && (
+        <p data-testid="quadrant" className="mt-4 rounded-2xl bg-accent-soft p-4 text-accent-deep">
+          <strong className="block text-ink">{QUADRANT_LABEL[convo.quadrant].title}</strong>
+          {QUADRANT_LABEL[convo.quadrant].text}
+        </p>
+      )}
 
       <section className="panel-dark mt-6 grid grid-cols-2 gap-4 rounded-3xl p-6">
         <div>

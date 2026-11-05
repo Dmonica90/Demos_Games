@@ -25,6 +25,30 @@ Sin esas variables (o con `?local=1` en la URL) se usa el modo local: abre el
 host en una pestaña y los "celulares" en otras del mismo navegador.
 `?fast=1` quita la pausa de "escribiendo…"; los tests e2e usan ambas.
 
+## El motor con memoria (caso 1)
+
+El caso 1 usa el motor de `src/engine/v2/`: el compañero no responde solo a la
+última frase, sino a todo lo ocurrido, a lo que ya entendió, a lo que todavía
+necesita y a cómo se ha sentido.
+
+| Módulo | Qué hace |
+| --- | --- |
+| `analyzer.ts` | Texto → señales (empatía, urgencia, impacto, solicitud concreta, entrega parcial, fecha, acuerdo, presión, culpa…), con negaciones y extracción de *qué* se necesita y *para cuándo* |
+| `memory.ts` | Lo que el compañero ya sabe (`urgency_explained`, `deadline_defined`…), qué preguntó y qué ofreció |
+| `character.ts` | Estrés, confianza, defensividad y disposición; cambian poco a poco (máximo 25 por turno) |
+| `engine.ts` | Reacción a lo nuevo + avance a la siguiente necesidad, sin repetir líneas ni regresar al inicio; cierre natural en el turno 3 |
+| `scoring.ts` | Los 5 criterios por turno; la misión es independiente y al final se muestra el cuadrante (comunicación × acuerdo) |
+| `cases/v2/entrega.config.ts` | Personalidad de Daniel, orden de necesidades y banco de respuestas del caso 1 |
+
+Es una aproximación por reglas, no comprensión real del lenguaje: frases nuevas
+que aparezcan en sesiones reales se agregan al analizador con una prueba en
+`engine/v2/engine.test.ts`. Más adelante `analyze()` puede cambiarse por una API
+sin tocar lo demás. Los casos 2 y 3 siguen con el motor anterior
+(`engine/conversation.ts`) hasta migrarlos con su propio config.
+
+**Laboratorio:** `#/laboratorio` permite jugar el caso 1 sin sesión y ver en vivo
+la memoria, la tarea y el ánimo del compañero, con las 5 respuestas de prueba.
+
 ## Rutas
 
 | URL | Pantalla |
@@ -33,6 +57,7 @@ host en una pestaña y los "celulares" en otras del mismo navegador.
 | `#/host/K7P2Q` | Host: sala con QR → dashboard en vivo → resultados |
 | `#/jugar/K7P2Q` | Participante (a donde lleva el QR) |
 | `#/jugar` | Participante sin QR: escribe el código |
+| `#/laboratorio` | Probar el motor del caso 1 y ver su memoria |
 
 ## Cómo se juega
 
@@ -92,6 +117,9 @@ El look sigue el **Clip Design System** (sin logos): Poppins self-hosted en
 con un riel de degradado de 2px arriba, botones píldora con degradado que se
 elevan con brillo naranja, barra superior (HUD) con degradado y paneles oscuros
 con textura de puntos para las cifras. Los tokens están en `src/index.css`.
+
+Las caritas animadas de la barra son **Noto Animated Emoji** de Google
+(licencia CC BY 4.0), reducidas a 128 px en `public/assets/emoji/`.
 
 ### Editar un caso
 

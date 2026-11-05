@@ -36,14 +36,11 @@ export function Lobby({ session, def, players, hostKey }: HostProps) {
         <div
           className="mt-6 w-full max-w-[22rem] [&>svg]:h-auto [&>svg]:w-full"
           role="img"
-          aria-label={`Código QR para unirse: ${url}`}
+          aria-label={`Código QR para unirse a la sesión ${session.code}`}
           dangerouslySetInnerHTML={{ __html: svg }}
         />
-        <p className="mt-6 text-sm text-ink-dim">o entra a</p>
-        <p className="mt-1 rounded-full bg-panel-2 px-4 py-1.5 font-mono text-sm break-all text-ink">
-          {url.replace(/\/[A-Z0-9]{5}$/, '')}
-        </p>
-        <p className="mt-3 text-sm text-ink-dim">con el código</p>
+        <p className="mt-5 text-sm font-medium text-ink">Escanea el QR con la cámara de tu celular 📲</p>
+        <p className="mt-4 text-xs font-bold tracking-[0.14em] text-ink-dim uppercase">Código de la sesión</p>
         <p data-testid="session-code" className="text-brand mt-1 text-6xl font-extrabold tracking-[0.18em]">
           {session.code}
         </p>
