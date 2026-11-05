@@ -8,9 +8,10 @@ type ButtonTone = 'primary' | 'ghost' | 'danger' | 'quiet';
 
 const TONES: Record<ButtonTone, string> = {
   primary:
-    'bg-accent text-white font-semibold hover:bg-accent/90 shadow-[0_10px_24px_-12px_var(--color-accent)]',
-  ghost: 'bg-panel text-ink border border-edge hover:border-accent/60',
-  danger: 'bg-alarm text-white font-semibold hover:bg-alarm/90',
+    'bg-brand text-white font-bold hover:-translate-y-0.5 hover:shadow-brand active:translate-y-0 active:scale-[0.97] disabled:bg-none disabled:bg-[#cbd5e1] disabled:text-[#475569] disabled:shadow-none disabled:translate-y-0',
+  ghost:
+    'bg-panel text-ink font-semibold border-2 border-edge hover:border-accent hover:text-accent-deep active:scale-[0.97]',
+  danger: 'bg-alarm-ink text-white font-bold hover:-translate-y-0.5 active:scale-[0.97]',
   quiet: 'bg-transparent text-ink-dim hover:text-ink border border-transparent hover:border-edge',
 };
 
@@ -39,7 +40,7 @@ export function Button({
         if (sfx) play(sfx);
         onClick?.();
       }}
-      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-[0.95rem] transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40 ${TONES[tone]} ${className}`}
+      className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-full px-8 py-3 text-base transition-all duration-200 disabled:cursor-not-allowed ${TONES[tone]} ${className}`}
       {...rest}
     >
       {children}
@@ -151,7 +152,7 @@ export function Dialog({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 grid place-items-center bg-inverse/50 p-4 backdrop-blur-sm">
       <motion.div
         ref={ref}
         role="dialog"
@@ -160,7 +161,7 @@ export function Dialog({
         initial={{ opacity: 0, scale: 0.94, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.28, ease: 'easeOut' }}
-        className="panel w-full max-w-lg rounded-2xl p-6 sm:p-8"
+        className="card w-full max-w-lg p-6 sm:p-8"
       >
         {children}
       </motion.div>

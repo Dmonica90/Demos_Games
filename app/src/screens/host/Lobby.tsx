@@ -28,9 +28,11 @@ export function Lobby({ session, def, players, hostKey }: HostProps) {
 
   return (
     <main className="mx-auto grid min-h-dvh max-w-7xl gap-8 px-4 py-8 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:items-center">
-      <section className="panel flex flex-col items-center rounded-3xl p-6 text-center sm:p-10">
+      <section className="card flex flex-col items-center p-6 text-center sm:p-10">
         <Brand />
-        <h1 className="mt-2 text-2xl font-bold sm:text-3xl">Escanea para unirte</h1>
+        <h1 className="mt-2 text-2xl sm:text-3xl">
+          Escanea para <span className="text-brand">unirte</span>
+        </h1>
         <div
           className="mt-6 w-full max-w-[22rem] [&>svg]:h-auto [&>svg]:w-full"
           role="img"
@@ -38,27 +40,29 @@ export function Lobby({ session, def, players, hostKey }: HostProps) {
           dangerouslySetInnerHTML={{ __html: svg }}
         />
         <p className="mt-6 text-sm text-ink-dim">o entra a</p>
-        <p className="mt-1 font-mono text-sm break-all">{url.replace(/\/[A-Z0-9]{5}$/, '')}</p>
+        <p className="mt-1 rounded-full bg-panel-2 px-4 py-1.5 font-mono text-sm break-all text-ink">
+          {url.replace(/\/[A-Z0-9]{5}$/, '')}
+        </p>
         <p className="mt-3 text-sm text-ink-dim">con el código</p>
-        <p data-testid="session-code" className="mt-1 font-mono text-5xl font-bold tracking-[0.2em] text-accent">
+        <p data-testid="session-code" className="text-brand mt-1 text-6xl font-extrabold tracking-[0.18em]">
           {session.code}
         </p>
       </section>
 
       <section className="flex flex-col">
-        <p className="text-sm font-semibold text-accent uppercase">
+        <p className="eyebrow">
           Caso {def.number} · {def.relation}
         </p>
-        <h2 className="mt-1 text-3xl font-bold sm:text-4xl">{def.title}</h2>
-        <p className="mt-3 leading-relaxed text-ink-dim">{def.context}</p>
+        <h2 className="mt-2 text-3xl sm:text-5xl">{def.title}</h2>
+        <p className="mt-4 text-lg leading-relaxed">{def.context}</p>
 
         <div className="mt-8 flex items-baseline justify-between">
-          <h3 className="text-lg font-semibold">Sala de espera</h3>
+          <h3 className="text-lg">Sala de espera</h3>
           <p aria-live="polite" className="text-sm text-ink-dim">
-            <strong className="text-2xl text-ink">{players.length}</strong> conectad{players.length === 1 ? 'o' : 'os'}
+            <strong className="text-brand text-4xl font-extrabold">{players.length}</strong> conectad{players.length === 1 ? 'o' : 'os'}
           </p>
         </div>
-        <ul className="mt-3 flex min-h-24 flex-wrap content-start gap-2 rounded-2xl border border-dashed border-edge p-4">
+        <ul className="mt-3 flex min-h-28 flex-wrap content-start gap-2 rounded-3xl border-2 border-dashed border-accent-line bg-panel/60 p-4">
           <AnimatePresence>
             {players.map((p) => (
               <motion.li
@@ -66,7 +70,7 @@ export function Lobby({ session, def, players, hostKey }: HostProps) {
                 layout
                 initial={{ opacity: 0, scale: 0.6 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="rounded-full bg-accent-soft px-4 py-1.5 font-medium text-accent"
+                className="rounded-full border-2 border-accent-line bg-accent-soft px-4 py-1.5 font-semibold text-accent-deep"
               >
                 {p.nickname}
               </motion.li>
@@ -79,13 +83,13 @@ export function Lobby({ session, def, players, hostKey }: HostProps) {
         <div className="mt-6 flex flex-wrap items-center gap-4">
           {hostKey ? (
             <Button onClick={startGame} disabled={players.length === 0} sfx="confirm">
-              Iniciar actividad
+              Iniciar actividad 🎬
             </Button>
           ) : (
             <p className="text-sm text-ink-dim">Vista de solo lectura: solo el navegador que creó la sesión puede iniciarla.</p>
           )}
           {error && (
-            <p role="alert" className="text-sm text-alarm">
+            <p role="alert" className="text-sm font-medium text-alarm-ink">
               {error}
             </p>
           )}

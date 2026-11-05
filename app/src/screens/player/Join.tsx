@@ -17,14 +17,17 @@ export function Join({ def, code, onJoin }: { def: CaseDef; code: string; onJoin
   };
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-4 py-10">
+    <main className="screen-in mx-auto flex min-h-dvh max-w-md flex-col justify-center px-4 py-10">
+      <div className="card p-6 sm:p-8">
       <Brand />
-      <h1 className="mt-2 text-3xl font-bold">¡Bienvenido!</h1>
-      <p className="mt-2 text-ink-dim">
-        Sesión <span className="font-mono font-semibold text-ink">{code}</span> · Caso {def.number}: {def.title}
+      <h1 className="mt-2 text-3xl">
+        ¡Hola! <span className="text-brand">Únete</span> 👋
+      </h1>
+      <p className="mt-2 text-sm">
+        Sesión <strong className="text-ink">{code}</strong> · Caso {def.number}: {def.title}
       </p>
       <form onSubmit={submit} className="mt-8 flex flex-col gap-3">
-        <label htmlFor="nickname" className="font-medium">
+        <label htmlFor="nickname" className="font-semibold text-ink">
           Tu nombre o nickname
         </label>
         <input
@@ -34,13 +37,14 @@ export function Join({ def, code, onJoin }: { def: CaseDef; code: string; onJoin
           maxLength={24}
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="min-h-12 rounded-xl border border-edge bg-panel px-4 text-lg outline-none focus:border-accent"
+          className="min-h-13 rounded-2xl border-2 border-edge bg-panel px-4 text-lg text-ink outline-none transition-colors focus:border-accent"
           placeholder="Ej. Ana"
         />
         <Button type="submit" disabled={!clean || busy} onClick={undefined} sfx="confirm">
           {busy ? 'Entrando…' : 'Entrar'}
         </Button>
       </form>
+      </div>
     </main>
   );
 }
@@ -48,9 +52,12 @@ export function Join({ def, code, onJoin }: { def: CaseDef; code: string; onJoin
 export function EnterCode({ onCode }: { onCode: (code: string) => void }) {
   const [code, setCode] = useState('');
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-4 py-10">
+    <main className="screen-in mx-auto flex min-h-dvh max-w-md flex-col justify-center px-4 py-10">
+      <div className="card p-6 sm:p-8">
       <Brand />
-      <h1 className="mt-2 text-3xl font-bold">Únete a una sesión</h1>
+      <h1 className="mt-2 text-3xl">
+        Únete a una <span className="text-brand">sesión</span>
+      </h1>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -58,7 +65,7 @@ export function EnterCode({ onCode }: { onCode: (code: string) => void }) {
         }}
         className="mt-8 flex flex-col gap-3"
       >
-        <label htmlFor="code" className="font-medium">
+        <label htmlFor="code" className="font-semibold text-ink">
           Código de la sesión
         </label>
         <input
@@ -68,13 +75,14 @@ export function EnterCode({ onCode }: { onCode: (code: string) => void }) {
           maxLength={8}
           value={code}
           onChange={(e) => setCode(e.target.value.toUpperCase())}
-          className="min-h-12 rounded-xl border border-edge bg-panel px-4 font-mono text-2xl tracking-[0.3em] uppercase outline-none focus:border-accent"
+          className="min-h-14 rounded-2xl border-2 border-edge bg-panel px-4 text-2xl font-bold tracking-[0.3em] text-ink uppercase outline-none transition-colors focus:border-accent"
           placeholder="K7P2Q"
         />
         <Button type="submit" disabled={code.trim().length < 5}>
           Continuar
         </Button>
       </form>
+      </div>
     </main>
   );
 }
