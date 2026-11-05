@@ -218,16 +218,28 @@ export function reply(def: CaseDef, convo: Conversation, text: string, now: numb
   };
 }
 
-/** Time ran out (or the host ended the activity) before an agreement. */
+/** True when the participant never sent a message. */
+export const isSilent = (convo: Conversation) => !convo.messages.some((m) => m.from === 'me');
+
+/**
+ * Time ran out (or the host ended the activity) before an agreement. Whoever
+ * never answered goes straight to red with 0 points: not writing is not a way
+ * to keep the 100.
+ */
 export function timeUp(convo: Conversation, now: number): Conversation {
   if (convo.done) return convo;
+  const silent = isSilent(convo);
+  const points = silent ? 0 : convo.points;
+  const color: Color = silent ? 'red' : convo.color;
   return {
     ...convo,
     stage: 'closed',
     done: true,
     endReason: 'time',
     finishedAt: now,
-    ...(convo.v2 ? { quadrant: quadrant(convo.points, convo.color, convo.mission) } : {}),
+    points,
+    color,
+    ...(convo.v2 ? { quadrant: quadrant(points, color, convo.mission) } : {}),
   };
 }
 

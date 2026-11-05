@@ -101,7 +101,9 @@ export function Dashboard({ session, def, players, hostKey }: HostProps) {
                     : c.done
                       ? c.mission
                         ? '✓ acuerdo'
-                        : '✗ sin acuerdo'
+                        : c.turn === 0
+                          ? '✗ sin respuesta'
+                          : '✗ sin acuerdo'
                       : `turno ${c.turn + 1}/${def.maxTurns}`}
                 </span>
               </span>
