@@ -137,7 +137,7 @@ export const entregaConfig: V2CaseConfig = {
       met: (f) => f.agreement_reached,
       confirm: { id: 'confirm', sets: ['agreement_reached', 'responsibility_confirmed'] },
       ask: [
-        { id: 'confirm-1n', when: named, text: 'Entonces quedamos así: te mando {deliverable} {partialWhen} y lo demás {deadline}. ¿Va?' },
+        { id: 'confirm-1n', when: named, text: 'Entonces quedamos así: te mando {deliverable} {partialWhen} y lo demás {deadline}. ¿Te parece?' },
         { id: 'confirm-1', when: unnamed, text: 'Entonces quedamos así: te mando {partial} {partialWhen} y el resto {deadline}. ¿Va?' },
         { id: 'confirm-1w', when: whole, text: 'Entonces quedamos así: te mando {deliverable} {deadline}. ¿Va?' },
         { id: 'confirm-2', text: 'Solo para confirmar: ¿te late que quede así, con el resto {deadline}?' },

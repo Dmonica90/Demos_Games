@@ -46,8 +46,13 @@ describe('estructura de los casos', () => {
       ...cfg.needs.flatMap((n) => [...n.ask, ...(n.offer?.lines ?? [])]),
       ...Object.values(cfg.reactions).flatMap((t) => [...t.normal, ...t.guarded]),
       ...Object.values(cfg.closings).flatMap((t) => [...t.normal, ...t.guarded]),
-    ].map((l) => l.id);
-    expect(new Set(ids).size).toBe(ids.length);
+    ];
+    // An id may appear twice only for the very same line (one offer reachable from two needs).
+    const byId = new Map<string, string>();
+    for (const l of ids) {
+      if (byId.has(l.id)) expect(byId.get(l.id), l.id).toBe(l.text);
+      byId.set(l.id, l.text);
+    }
     // Flags used by needs and stages exist.
     const flagIds = new Set(cfg.flags.map((f) => f.id));
     for (const s of cfg.stages) expect(flagIds.has(s.flag), s.flag).toBe(true);

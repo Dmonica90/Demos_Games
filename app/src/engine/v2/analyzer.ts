@@ -30,6 +30,11 @@ export const FAMILIES: Record<V2Signal, Family> = {
       'otras prioridades',
       'tiene sentido',
       'es normal',
+      'no es facil',
+      '(?:ya )?se que (?:no|estas|andas|tienes)',
+      '(?:hasta el|a) tope',
+      'se te (?:junto|juntaron|cargo)',
+      'que pena que',
       'lamento',
       'que pena',
       'como estas',
@@ -76,6 +81,18 @@ export const FAMILIES: Record<V2Signal, Family> = {
       'estoy (?:detenid\\w*|atorad\\w*|frenad\\w*)',
       'para (?:poder )?(?:cerrar|terminar|avanzar|entregar|presentar)',
       'el (?:cliente|proyecto|reporte|equipo) (?:depende|espera|necesita)',
+      'se (?:nos |me |le )?(?:retrasa|atrasa|cae|detiene|complica|frena)\\w*',
+      '(?:lo|la|se) (?:presento|presenta|expongo|entrego al cliente)',
+      '(?:esta|estan) esperando',
+      '(?:el|la|mi) (?:cliente|jefe|jefa|director\\w*|gerente) (?:me )?(?:lo )?(?:esta|estan) (?:pidiendo|esperando)',
+      'pa (?:terminar|cerrar|avanzar|entregar|seguir)',
+      'me urge',
+      'porque',
+      'ya que',
+      'sin (?:eso|esto|esa|ese|tu parte|lo tuyo) no (?:puedo|podemos|podria)',
+      'tengo que entregar(?:le|lo|la)?',
+      '(?:se|nos|me) (?:quej\\w*|reclam\\w*)',
+      'urge',
       'tengo que (?:presentar|exponer)',
       'tengo (?:una )?(?:presentacion|junta|reunion) (?:a las|hoy|manana|con)',
       'presento (?:a las|hoy|manana)',
@@ -86,6 +103,8 @@ export const FAMILIES: Record<V2Signal, Family> = {
     negatable: true,
     patterns: rx(
       'necesito',
+      'ocupo',
+      'me ocupa',
       'me falta',
       'me hace falta',
       'requiero',
@@ -117,6 +136,9 @@ export const FAMILIES: Record<V2Signal, Family> = {
       'lo demas (?:despues|manana|luego)',
       'primero (?:la|el|lo) ',
       '(?:la )?otra parte',
+      '(?:una )?primera version',
+      'borrador',
+      'aunque (?:sea|no este)',
       'la siguiente parte',
       'el resto',
       'lo demas',
@@ -131,6 +153,8 @@ export const FAMILIES: Record<V2Signal, Family> = {
       'trato hecho',
       'confirm\\w*',
       'te parece bien',
+      'me parece (?:bien|perfecto|buena idea|excelente)',
+      'asi (?:le hacemos|lo hacemos|lo dejamos|quedamos)',
       'acordamos',
       'cuento contigo',
       'me funciona',
@@ -150,7 +174,8 @@ export const FAMILIES: Record<V2Signal, Family> = {
   },
   affirm: {
     negatable: false,
-    patterns: rx('si', 'claro', 'va', 'perfecto', 'excelente', 'listo', 'me sirve', 'me funciona', 'de acuerdo', 'genial', 'ok'),
+    // Short yes-words only count at the start ("si no lo tengo…" is a condition, "se va a caer" is not a yes).
+    patterns: rx('^(?:si(?=$|,|\\.| (?:claro|perfecto|va|me|de acuerdo|gracias|esta bien|sale|dale|ok|por supuesto))|claro|va|ok|okay|sale|listo|vale|dale)', 'perfecto', 'excelente', 'me sirve', 'me funciona', 'de acuerdo', 'genial'),
   },
   pressure: {
     negatable: false,
@@ -186,6 +211,8 @@ export const FAMILIES: Record<V2Signal, Family> = {
       'no puede ser',
       'te dije',
       'irresponsab\\w*',
+      'que poca (?:seriedad|verguenza|responsabilidad|madre)',
+      'ya te lo habia (?:pedido|dicho)',
     ),
   },
   hostile: {
@@ -207,7 +234,9 @@ function positiveMatch(plain: string, pattern: RegExp, negatable: boolean): bool
   while ((m = pattern.exec(plain))) {
     if (!negatable) return true;
     // A pattern that itself starts with a negation ("no puedo cerrar") is not negated by it.
-    const before = plain.slice(0, m.index).trim().split(' ').slice(-3);
+    // Only words in the same clause negate ("si no llega, se nos cae" is not negated).
+    const clause = plain.slice(0, m.index).split(/[,.;:!?¿¡]/).pop() ?? '';
+    const before = clause.trim().split(' ').slice(-2);
     if (!before.some((w) => NEGATORS.has(w))) return true;
   }
   return false;
@@ -218,7 +247,7 @@ const GENERIC =
 
 /** Extracted from the original text (case-insensitive), so names keep their capitals and accents. */
 const DELIVERABLE =
-  /(?:necesito|me falta|me hace falta|requiero|env[ií]a(?:me|r(?:me)?)?|manda(?:me|r(?:me)?)?|m[aá]ndame|pasa(?:me|r(?:me)?)?|p[aá]same|entrega(?:me|r(?:me)?)?|entr[eé]game|compart(?:e|ir)(?:me)?|mandes|env[ií]es|pases)\s+((?:los|las|el|la|esos|esas|ese|esa|tus|tu)\s+\p{L}+(?:\s+(?:de|del|para)\s+(?:la\s+|el\s+|los\s+|las\s+)?\p{L}+)?)/iu;
+  /(?:necesito|ocupo|me falta|me hace falta|requiero|env[ií]a(?:me|r(?:me)?)?|manda(?:me|r(?:me)?)?|m[aá]ndame|pasa(?:me|r(?:me)?)?|p[aá]same|entrega(?:me|r(?:me)?)?|entr[eé]game|compart(?:e|ir)(?:me)?|mandes|env[ií]es|pases)\s+((?:los|las|el|la|esos|esas|ese|esa|tus|tu)\s+\p{L}+(?:\s+(?:de|del|para)\s+(?:la\s+|el\s+|los\s+|las\s+)?\p{L}+)?)/iu;
 
 const TIME_WORD = '(?:\\d{1,2}(?::\\d{2})?\\s?(?:am|pm|hrs?|horas)?|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce)';
 const DEADLINE = new RegExp(
@@ -231,6 +260,7 @@ const DEADLINE = new RegExp(
     `(?:al )?(?:final|fin) del día`,
     `(?:al )?(?:final|fin) del dia`,
     `a primera hora`,
+    `antes de que (?:acabe|termine|se acabe|se termine) (?:el día|el dia|la jornada|el turno)`,
     `antes del? (?:lunes|martes|miércoles|miercoles|jueves|viernes|cierre|mediodía|mediodia)`,
     `para el (?:lunes|martes|miércoles|miercoles|jueves|viernes)`,
     `la (?:próxima|proxima|otra) semana`,
@@ -306,6 +336,8 @@ export function analyze(
   const hasSubstance = concrete.some((c) => (signals[c.signal] ?? 0) >= (c.minStrength ?? 0.5));
   if (signals.vague && hasSubstance) delete signals.vague;
   if (!signals.vague && signals.short && !signals.affirm && !hasSubstance) signals.vague = 1;
+  // A bare "ok" says nothing by itself; the engine drops "vague" when it answers an offer.
+  if (signals.affirm && words <= 2 && !hasSubstance) signals.vague = 1;
 
   return { signals, deliverable, deadline, partial, partialWhen, times, words };
 }

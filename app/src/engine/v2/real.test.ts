@@ -95,7 +95,7 @@ describe('caso 3 · conversaciones reales', () => {
   it('Monica: Luis responde a su propuesta y no finge que le preguntaron', () => {
     const c = play('mejorar', ...monica);
     const lines = partner(c);
-    expect(lines[0]).not.toContain('Gracias por preguntar');
+    expect(lines[0]).not.toMatch(/Gracias por (preguntar|querer escucharme)/);
     expect(lines[0]).toContain('Organizarnos así');
     expect(lines.join(' ')).not.toContain('Sigo sin entender');
     expect(new Set(lines).size).toBe(lines.length);

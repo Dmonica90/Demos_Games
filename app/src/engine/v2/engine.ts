@@ -37,6 +37,17 @@ function pickTone(tone: Tone, guarded: boolean, used: string[], m: Memory): Line
   return pickLine(guarded && tone.guarded.length ? tone.guarded : tone.normal, used, m);
 }
 
+/**
+ * A reaction not said yet: the tone's own pool first, then the other one.
+ * When every line was used, the character skips the reaction rather than
+ * repeating itself.
+ */
+function freshReaction(tone: Tone, guarded: boolean, used: string[], m: Memory): Line | undefined {
+  const first = guarded && tone.guarded.length ? tone.guarded : tone.normal;
+  const second = first === tone.normal ? tone.guarded : tone.normal;
+  return [...first, ...second].find((l) => !used.includes(l.id) && fits(l, m));
+}
+
 /** The first unmet need; once the plan is ready, straight to confirming it. */
 export function identifyNextNeed(cfg: V2CaseConfig, m: Memory): Need | null {
   if (cfg.planReady(m.flags)) {
@@ -159,19 +170,22 @@ export function processParticipantMessage(
     said.push(pickTone(cfg.closings.agreement, guarded || rel !== 'collaborative', used, memory));
   } else if (rel === 'deteriorated') {
     closing = turn >= cfg.maxTurns || character.defensiveness >= 85 ? 'deteriorated' : null;
-    said.push(
-      closing
-        ? pickTone(cfg.closings.deteriorated, true, used, memory)
-        : pickTone(cfg.reactions[reaction?.hostile ? reaction.id : cfg.brokenReaction], true, used, memory),
-    );
+    const line = closing
+      ? pickTone(cfg.closings.deteriorated, true, used, memory)
+      : freshReaction(cfg.reactions[reaction?.hostile ? reaction.id : cfg.brokenReaction], true, used, memory) ??
+        // Nothing new left to say while upset: end the conversation.
+        ((closing = 'deteriorated'), pickTone(cfg.closings.deteriorated, true, used, memory));
+    said.push(line);
   } else if (turn >= cfg.maxTurns) {
-    if (reaction) said.push(pickTone(cfg.reactions[reaction.id], guarded, used, memory));
+    const r = reaction && freshReaction(cfg.reactions[reaction.id], guarded, used, memory);
+    if (r) said.push(r);
     closing = cfg.lastClosing(memory.flags);
     said.push(pickTone(cfg.closings[closing], guarded, used, memory));
   } else {
-    if (reaction) said.push(pickTone(cfg.reactions[reaction.id], guarded, used, memory));
+    const r = reaction && freshReaction(cfg.reactions[reaction.id], guarded, used, memory);
+    if (r) said.push(r);
     // A long message the rules could not read is still acknowledged, never ignored.
-    else if (a.words >= 8 && !s.vague && !escalation) {
+    else if (!reaction && a.words >= 8 && !s.vague && !escalation) {
       const ack = cfg.acknowledge.find((l) => !used.includes(l.id));
       if (ack) said.push(ack);
     }
@@ -188,7 +202,8 @@ export function processParticipantMessage(
       } else {
         // Ask again only in a way not used yet; otherwise say something else.
         const ask = [need.ask[count], ...need.ask].find((l) => l && !used.includes(l.id) && fits(l, memory));
-        const line = ask ?? cfg.stall.find((l) => !used.includes(l.id));
+        // Out of new ways to ask: if the character already reacted, that is enough.
+        const line = ask ?? (reaction ? undefined : cfg.stall.find((l) => !used.includes(l.id)));
         if (line) said.push(line);
         if (need.confirm && ask) pending = need.confirm.id;
       }
