@@ -1,7 +1,7 @@
 name: Test and deploy
 
 # Every pull request runs the tests and the build. A push to main also
-# publishes the course at https://dmonica90.github.io/Shield_Defense/. The site
+# publishes the game at https://dmonica90.github.io/Shield_Defense/. The site
 # is built here rather than committed, so the repository keeps only sources.
 #
 # One-time setup: Settings -> Pages -> Source must be set to "GitHub Actions".
@@ -44,22 +44,18 @@ jobs:
         run: npm ci
 
       # A broken build should never reach the live site. `npm run build` also
-      # typechecks, and the unit tests cover the rules, the script and tracking.
+      # typechecks, and the unit tests cover the scoring engine and the cases.
       - name: Test
         run: npm test
 
+      # The Supabase URL and anon key are public by design (they ship in the
+      # page); they live in repository variables so they are easy to change.
+      # Without them the site builds in local mode (same-browser only).
       - name: Build
         run: npm run build
-
-      # The package to upload to Workday, downloadable from the run's summary.
-      - name: SCORM package
-        run: npm run package:scorm
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: clip-shield-defense-scorm2004
-          path: app/clip-shield-defense-scorm2004.zip
-          if-no-files-found: error
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
 
       - uses: actions/configure-pages@v5
         if: github.event_name != 'pull_request'

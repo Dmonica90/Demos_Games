@@ -1,7 +1,7 @@
 {
-  "name": "clip-shield-defense",
+  "name": "simulador-comunicacion-escrita",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,12 +9,12 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "e2e": "playwright test",
-    "build:scorm": "tsc -b && vite build --mode scorm --outDir dist-scorm/scormcontent --emptyOutDir",
-    "package:scorm": "npm run build:scorm && node scripts/package-scorm.mjs"
+    "e2e": "playwright test"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.119.0",
     "framer-motion": "^11.15.0",
+    "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
@@ -22,6 +22,7 @@
     "@playwright/test": "^1.49.1",
     "@tailwindcss/vite": "^4.0.0",
     "@types/node": "^26.4.1",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",

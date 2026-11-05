@@ -1,41 +1,91 @@
 import { expect, test } from '@playwright/test';
-import { areaButton, begin, playArea } from './helpers';
+import type { BrowserContext, Page } from '@playwright/test';
 
-test('a reload mid-run offers to continue where the player left off', async ({ page }) => {
-  await begin(page);
-  await playArea(page, 'finanzas', 1, true);
+const PHONE = { width: 390, height: 844 };
+const SHOTS = process.env.SHOTS;
 
-  await page.reload();
-  await page.getByRole('button', { name: 'Continuar donde me quedé' }).click();
+async function phone(context: BrowserContext, url: string, nickname: string): Promise<Page> {
+  const page = await context.newPage();
+  await page.setViewportSize(PHONE);
+  await page.goto(url);
+  await page.getByLabel('Tu nombre o nickname').fill(nickname);
+  await page.getByRole('button', { name: 'Entrar' }).click();
+  await expect(page.getByText('Ya estás en la sala')).toBeVisible();
+  return page;
+}
 
-  await expect(page.getByRole('heading', { name: 'Elige un área' })).toBeVisible();
-  await expect(areaButton(page, 'finanzas')).toContainText('Fragmento obtenido');
-  await expect(areaButton(page, 'finanzas')).toBeDisabled();
+async function say(page: Page, text: string) {
+  await page.getByLabel('Tu respuesta').fill(text);
+  await page.getByRole('button', { name: 'Enviar' }).click();
+  await expect(page.getByLabel('Tu respuesta')).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Enviar' })).toBeDisabled(); // empty again, answer arrived
+}
+
+test('una sesión completa: QR, sala, conversación, dashboard y ranking', async ({ context }) => {
+  const host = await context.newPage();
+  await host.setViewportSize({ width: 1440, height: 900 });
+  await host.goto('/?local=1&fast=1#/');
+  await host.getByText('La entrega pendiente').click();
+  await host.getByRole('button', { name: 'Crear sesión y mostrar QR' }).click();
+
+  const code = (await host.getByTestId('session-code').textContent())!.trim();
+  expect(code).toMatch(/^[A-Z0-9]{5}$/);
+  await expect(host.getByRole('img', { name: /Código QR/ })).toBeVisible();
+  if (SHOTS) await host.screenshot({ path: `${SHOTS}/1-host-lobby.png` });
+
+  // The QR encodes this URL; the phones open it.
+  const url = `/?local=1&fast=1#/jugar/${code}`;
+  const ana = await phone(context, url, 'Ana');
+  const beto = await phone(context, url, 'Beto');
+  const caro = await phone(context, url, 'Caro');
+  await expect(host.getByText('3 conectados')).toBeVisible();
+  if (SHOTS) await ana.screenshot({ path: `${SHOTS}/2-phone-waiting.png` });
+
+  await host.getByRole('button', { name: 'Iniciar actividad' }).click();
+  for (const p of [ana, beto, caro]) await expect(p.getByText('No he podido terminar la información')).toBeVisible();
+
+  // Ana: clear, empathetic, assertive, closes an agreement.
+  await say(
+    ana,
+    'Entiendo que se te juntaron cosas, gracias por avisarme. La necesito porque el proyecto depende de esa información para entregar al cliente. ¿Qué pasó?',
+  );
+  await say(
+    ana,
+    'Te propongo que me mandes primero la parte de ventas y lo demás después. ¿Te parece si me la envías mañana a las 10 am?',
+  );
+  await expect(ana.getByText('¡Misión cumplida')).toBeVisible();
+  if (SHOTS) await ana.screenshot({ path: `${SHOTS}/4-phone-done.png`, fullPage: true });
+
+  // Beto: vague, then recovers into yellow.
+  await say(beto, 'Ok, cuando puedas.');
+  await expect(beto.getByTestId('my-color')).toHaveAttribute('data-color', 'yellow');
+
+  // Caro: blames twice and goes red.
+  await say(caro, 'Otra vez lo mismo, siempre llegas tarde con todo.');
+  await say(caro, 'No puede ser, es tu responsabilidad, sin excusas.');
+  await expect(caro.getByTestId('my-color')).toHaveAttribute('data-color', 'red');
+  if (SHOTS) await caro.screenshot({ path: `${SHOTS}/3-phone-chat.png` });
+
+  await expect(host.getByTestId('row-Ana')).toHaveAttribute('data-color', 'green');
+  await expect(host.getByTestId('row-Beto')).toHaveAttribute('data-color', 'yellow');
+  await expect(host.getByTestId('row-Caro')).toHaveAttribute('data-color', 'red');
+  if (SHOTS) await host.screenshot({ path: `${SHOTS}/5-host-dashboard.png` });
+
+  await host.getByRole('button', { name: 'Terminar y ver resultados' }).click();
+  const ranking = host.getByRole('list', { name: 'Ranking' }).getByRole('listitem');
+  await expect(ranking).toHaveCount(3);
+  await expect(ranking.nth(0)).toContainText('Ana');
+  await expect(ranking.nth(2)).toContainText('Caro');
+  await expect(host.getByText('Culpa o reclama')).toBeVisible();
+  if (SHOTS) await host.screenshot({ path: `${SHOTS}/6-host-results.png`, fullPage: true });
+
+  // The others' phones close when the host ends the activity.
+  await expect(beto.getByText('Conversación terminada')).toBeVisible();
 });
 
-test('starting over discards the saved run', async ({ page }) => {
-  await begin(page);
-  await playArea(page, 'atencion', 1, false);
-
-  await page.reload();
-  await page.getByRole('button', { name: 'Empezar de nuevo' }).click();
-  await page.getByRole('button', { name: 'Saltar intro' }).click();
-  await page.getByRole('button', { name: 'Entendido' }).click();
-  await expect(areaButton(page, 'atencion')).toContainText('Pendiente');
-});
-
-test('the options are not always in the order the script lists them', async ({ page }) => {
-  // With the right answer always first, "pick A" would win. Across a few runs
-  // the first option shown must not always be the right one.
-  const firsts = new Set<string>();
-  for (let run = 0; run < 6 && firsts.size < 2; run += 1) {
-    // Each run starts fresh: drop the save the previous one left behind.
-    if (run > 0) await page.evaluate(() => localStorage.clear());
-    await begin(page);
-    await areaButton(page, 'atencion').click();
-    await page.getByRole('button', { name: 'Explorar' }).click();
-    await page.getByRole('button', { name: 'Decidir' }).click();
-    firsts.add((await page.getByRole('radio').first().textContent()) ?? '');
-  }
-  expect(firsts.size).toBeGreaterThan(1);
+test('un celular sin código puede escribirlo', async ({ page }) => {
+  await page.goto('/?local=1#/jugar');
+  await page.getByLabel('Código de la sesión').fill('zzzzz');
+  await page.getByRole('button', { name: 'Continuar' }).click();
+  await expect(page.getByText('Código no válido')).toBeVisible();
 });

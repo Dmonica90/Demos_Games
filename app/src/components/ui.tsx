@@ -1,6 +1,6 @@
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import type { ReactNode } from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useSound } from '../audio/SoundProvider';
 import type { SfxName } from '../assets';
 
@@ -8,9 +8,9 @@ type ButtonTone = 'primary' | 'ghost' | 'danger' | 'quiet';
 
 const TONES: Record<ButtonTone, string> = {
   primary:
-    'bg-accent text-ground font-semibold hover:bg-accent/90 shadow-[0_0_28px_-8px_var(--color-accent)]',
-  ghost: 'bg-panel-2/80 text-ink border border-edge hover:border-accent/70 hover:bg-panel-2',
-  danger: 'bg-alarm text-ground font-semibold hover:bg-alarm/90',
+    'bg-accent text-white font-semibold hover:bg-accent/90 shadow-[0_10px_24px_-12px_var(--color-accent)]',
+  ghost: 'bg-panel text-ink border border-edge hover:border-accent/60',
+  danger: 'bg-alarm text-white font-semibold hover:bg-alarm/90',
   quiet: 'bg-transparent text-ink-dim hover:text-ink border border-transparent hover:border-edge',
 };
 
@@ -44,59 +44,6 @@ export function Button({
     >
       {children}
     </button>
-  );
-}
-
-/**
- * Full-bleed scene with a cover image behind it. Every screen uses this so the
- * cross-fade between phases is identical everywhere.
- */
-export function Scene({
-  backdrop,
-  children,
-  overlay = 'bg-ground/72',
-  className = '',
-  zoomBackdrop = false,
-  ambient,
-}: {
-  backdrop?: string;
-  children: ReactNode;
-  overlay?: string;
-  className?: string;
-  /** Scales the backdrop in, for a "lean closer" beat. */
-  zoomBackdrop?: boolean;
-  /** Decorative layers drawn between the backdrop and the content. */
-  ambient?: ReactNode;
-}) {
-  return (
-    <motion.section
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.45, ease: 'easeOut' }}
-      className={`relative min-h-dvh w-full overflow-hidden ${className}`}
-    >
-      {backdrop && (
-        <motion.img
-          src={backdrop}
-          alt=""
-          aria-hidden="true"
-          initial={zoomBackdrop ? { scale: 1.12, opacity: 0 } : false}
-          animate={zoomBackdrop ? { scale: 1, opacity: 1 } : undefined}
-          transition={{ duration: 0.75, ease: 'easeOut' }}
-          className="absolute inset-0 h-full w-full object-cover"
-        />
-      )}
-      <div className={`absolute inset-0 ${overlay}`} aria-hidden="true" />
-      <div
-        className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_35%,var(--color-ground)_100%)] opacity-80"
-        aria-hidden="true"
-      />
-      {ambient}
-      <div className="relative z-10 mx-auto flex min-h-dvh w-full max-w-6xl flex-col px-4 py-6 sm:px-8">
-        {children}
-      </div>
-    </motion.section>
   );
 }
 
@@ -146,53 +93,6 @@ export function StaggerItem({
     >
       {children}
     </Tag>
-  );
-}
-
-/**
- * Reveals text one character at a time, for the narrator and the console. The full string
- * is always in the DOM for assistive technology; only the visible slice grows.
- */
-export function Typewriter({
-  text,
-  speed = 18,
-  className = '',
-  onDone,
-}: {
-  text: string;
-  speed?: number;
-  className?: string;
-  onDone?: () => void;
-}) {
-  const reduceMotion = useReducedMotion();
-  const [count, setCount] = useState(reduceMotion ? text.length : 0);
-  const doneRef = useRef(onDone);
-  doneRef.current = onDone;
-
-  useEffect(() => {
-    if (reduceMotion) {
-      setCount(text.length);
-      doneRef.current?.();
-      return;
-    }
-    setCount(0);
-    let index = 0;
-    const id = setInterval(() => {
-      index += 1;
-      setCount(index);
-      if (index >= text.length) {
-        clearInterval(id);
-        doneRef.current?.();
-      }
-    }, speed);
-    return () => clearInterval(id);
-  }, [text, speed, reduceMotion]);
-
-  return (
-    <p className={className}>
-      <span aria-hidden="true">{text.slice(0, count)}</span>
-      <span className="sr-only">{text}</span>
-    </p>
   );
 }
 
@@ -251,7 +151,7 @@ export function Dialog({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-ground/85 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4 backdrop-blur-sm">
       <motion.div
         ref={ref}
         role="dialog"
