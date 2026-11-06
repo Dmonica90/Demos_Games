@@ -394,7 +394,9 @@ function Rescues({ view, onMark }: { view: HostView; onMark: (id: string, ok: bo
 
 function Allies({ view }: { view: HostView }) {
   const byId = new Map(view.players.map((p) => [p.id, p]));
-  if (view.allies.length === 0)
+  // A database without the ally migration (004) sends no `allies`: show none, don't crash.
+  const allies = view.allies ?? [];
+  if (allies.length === 0)
     return <Empty>{view.session.saleOpen ? 'Esperando a que elijan a su equipo…' : 'Abre la ronda de aliados: cada quien elige quién cree que es de su equipo.'}</Empty>;
   return (
     <section className="card p-5">
@@ -403,7 +405,7 @@ function Allies({ view }: { view: HostView }) {
         ✓ es del mismo equipo (Comercio, Venta, o phishing con phishing). La persona normal no tiene equipo. Al cerrar la ronda, cada celular ve cuántos acertó.
       </p>
       <ul data-testid="cc-allies" className="mt-3 flex flex-col gap-2">
-        {view.allies.map((g) => {
+        {allies.map((g) => {
           const me = byId.get(g.playerId);
           if (!me) return null;
           const picks = g.targetIds.flatMap((id) => (byId.get(id) ? [byId.get(id)!] : []));

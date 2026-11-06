@@ -624,13 +624,14 @@ function RescuePanel({ code, token, view }: { code: string; token: string; view:
 
 function AlliesPanel({ code, token, view }: { code: string; token: string; view: PlayerView }) {
   const { act, busy, err } = useAction();
-  const [picked, setPicked] = useState<number[]>(view.myAllies);
+  const myAllies = view.myAllies ?? []; // no ally migration yet: start empty
+  const [picked, setPicked] = useState<number[]>(myAllies);
   const team = allyTeam(view.me.role);
   const others = view.roster.filter((r) => r.num !== view.me.num);
   const open = view.session.saleOpen;
   const toggle = (n: number) =>
     setPicked((p) => (p.includes(n) ? p.filter((x) => x !== n) : p.length >= MAX_ALLIES ? p : [...p, n]));
-  const sent = view.myAllies.length > 0 && view.myAllies.length === picked.length && picked.every((n) => view.myAllies.includes(n));
+  const sent = myAllies.length > 0 && myAllies.length === picked.length && picked.every((n) => myAllies.includes(n));
 
   return (
     <section className="card p-5" aria-labelledby="cc-allies">

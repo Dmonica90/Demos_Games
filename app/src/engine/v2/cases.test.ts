@@ -26,6 +26,25 @@ describe('caso 2 · Todo es urgente (Mariana)', () => {
     expect(last(c)).toContain('mañana a mediodía');
   });
 
+  it('decir qué va primero basta para la prioridad: acuerdo con el plan de la usuaria', () => {
+    const c = play(
+      'urgente',
+      'Tengo otra entrega hoy. Lo nuevo va primero y el reporte mensual lo muevo al lunes.',
+      'Me parece bien, mañana a mediodía te lo mando.',
+    );
+    expect(c.mission).toBe(true);
+    expect(last(c)).toContain('lo nuevo va primero');
+  });
+
+  it('pedir ayuda sin decir qué va primero no basta: no hay acuerdo todavía', () => {
+    const c = play(
+      'urgente',
+      'Puedo entregarlo mañana a mediodía si me ayudas con la sección A hoy. ¿Te parece?',
+      'Sí, perfecto. Te lo mando mañana a mediodía.',
+    );
+    expect(c.mission).toBe(false);
+  });
+
   it('acepta sin explicar su carga: Mariana cuenta con todo y se acumulan los compromisos', () => {
     const c1 = play('urgente', 'Sí claro, sin problema, mañana lo tienes.');
     expect(last(c1)).toContain('cuento con esto');
