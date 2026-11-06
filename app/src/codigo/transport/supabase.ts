@@ -35,6 +35,9 @@ const toSession = (r: Row): CCSession => ({
 
 export function supabaseCC(url: string, anonKey: string): CCTransport {
   const db = createClient(url, anonKey, { auth: { persistSession: false } });
+  // A phone watches the session twice (its view and the public row). Supabase
+  // refuses a second channel with the same name, so each watch gets its own.
+  let channels = 0;
   async function call<T>(fn: string, args: Record<string, unknown>): Promise<T> {
     const { data, error } = await db.rpc(fn, args);
     if (error) throw new Error(error.message);
@@ -72,7 +75,7 @@ export function supabaseCC(url: string, anonKey: string): CCTransport {
       call('cc_sale', { p_code: code, p_token: token, p_seller: num, p_criteria: criteria, p_convinced: convinced }),
     watch(code, onChange) {
       const channel = db
-        .channel(`cc:${code}`)
+        .channel(`cc:${code}:${(channels += 1)}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'cc_sessions', filter: `code=eq.${code}` }, (p) => {
           if (p.new && 'code' in p.new) onChange(toSession(p.new as Row));
         })
