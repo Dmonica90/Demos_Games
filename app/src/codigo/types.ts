@@ -46,7 +46,8 @@ export type CCPlayer = {
   role: RoleId;
   decoy: Group | null;
   auditor: boolean;
-  points: number;
+  /** Barra de vida, 0–100: baja con votos recibidos, se recupera con el rescate. */
+  life: number;
   joinedAt: number;
 };
 
@@ -96,6 +97,14 @@ export type HostView = {
   votes: Vote[];
   rescues: Rescue[];
   sales: Sale[];
+};
+
+/** The public board for the projected screen: names and life, no roles, no votes. */
+export type BoardView = {
+  session: CCSession;
+  players: { num: number; name: string; life: number; auditor: boolean; wasPhishing: boolean | null }[];
+  /** How many voted in the current round. */
+  voted: number;
 };
 
 export type JoinResult = { status: 'ok'; token: string } | { status: 'exists'; num: number };

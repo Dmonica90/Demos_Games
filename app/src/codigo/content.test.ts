@@ -1,9 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { RESCUE_SECTIONS, ROLES, SECTIONS, pistasFor } from './content';
+import { MIN_PLAYERS, RESCUE_SECTIONS, ROLES, SECTIONS, pistasFor } from './content';
 import type { RoleId } from './types';
 import { readFileSync } from 'node:fs';
 
 describe('Código Clip: contenido', () => {
+  it('TP va antes que Ciberseguridad', () => {
+    expect(SECTIONS.map((x) => x.id)).toEqual(['quienes', 'firma', 'promesa', 'comida', 'equipos', 'tp', 'ciber']);
+  });
+
+  it('los rasgos son frases del personaje, no preguntas', () => {
+    for (const role of Object.keys(ROLES) as RoleId[])
+      for (const p of pistasFor(role, role === 'phishing' ? 'venta' : null)) expect(p.texto, p.id).not.toMatch(/[¿?]/);
+  });
+
   it('cada jugador ve 5 pistas, todas con referencia y estado', () => {
     for (const role of Object.keys(ROLES) as RoleId[]) {
       for (const decoy of role === 'phishing' ? (['comercio', 'venta'] as const) : [null]) {
@@ -32,8 +41,9 @@ describe('Código Clip: contenido', () => {
   });
 
   it('la migración SQL usa las mismas secciones con rescate y el mismo número de secciones', () => {
-    const sql = readFileSync(new URL('../../../supabase/migrations/002_codigo_clip.sql', import.meta.url), 'utf8');
-    expect(sql).toContain(`array[${RESCUE_SECTIONS.join(', ')}]`);
-    expect(sql).toContain(`v_section > ${SECTIONS.length - 1}`);
+    const read = (f: string) => readFileSync(new URL(`../../../supabase/migrations/${f}`, import.meta.url), 'utf8');
+    expect(read('002_codigo_clip.sql')).toContain(`v_section > ${SECTIONS.length - 1}`);
+    expect(read('003_codigo_clip_v2.sql')).toContain(`array[${RESCUE_SECTIONS.join(', ')}]`);
+    expect(read('003_codigo_clip_v2.sql')).toContain(`< ${MIN_PLAYERS} then`);
   });
 });

@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react';
  *   #/laboratorio   facilitator: try the engine and see its memory
  *   #/codigo                 Código Clip host: register the group
  *   #/codigo/host/K7P2Q      Código Clip host: run the session
+ *   #/codigo/pantalla/K7P2Q  Código Clip projected screen (QR, section, ranking)
  *   #/codigo/jugar/K7P2Q     Código Clip phone (the QR points here)
  */
 export type Route =
@@ -18,6 +19,7 @@ export type Route =
   | { name: 'home' }
   | { name: 'cc-new' }
   | { name: 'cc-host'; code: string }
+  | { name: 'cc-screen'; code: string }
   | { name: 'cc-play'; code: string | null }
   | { name: 'host'; code: string }
   | { name: 'play'; code: string | null }
@@ -27,6 +29,7 @@ export function parse(hash: string): Route {
   const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean);
   if (parts[0] === 'codigo') {
     if (parts[1] === 'host' && parts[2]) return { name: 'cc-host', code: parts[2].toUpperCase() };
+    if (parts[1] === 'pantalla' && parts[2]) return { name: 'cc-screen', code: parts[2].toUpperCase() };
     if (parts[1] === 'jugar') return { name: 'cc-play', code: parts[2]?.toUpperCase() ?? null };
     return { name: 'cc-new' };
   }
@@ -59,6 +62,11 @@ export function joinUrl(code: string): string {
 /** The link the Código Clip QR encodes. */
 export function ccJoinUrl(code: string): string {
   return `${location.origin}${location.pathname}${location.search}#/codigo/jugar/${code}`;
+}
+
+/** The public screen to project or share in a call. */
+export function ccScreenUrl(code: string): string {
+  return `${location.origin}${location.pathname}${location.search}#/codigo/pantalla/${code}`;
 }
 
 /** `?fast=1` skips the typing pauses; the e2e tests use it. */

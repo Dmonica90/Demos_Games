@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { newCode, newKey } from '../../realtime/types';
-import type { CCSession, HostView, JoinResult, PlayerView } from '../types';
+import type { BoardView, CCSession, HostView, JoinResult, PlayerView } from '../types';
 import type { CCTransport } from './types';
 
 /**
@@ -67,6 +67,7 @@ export function supabaseCC(url: string, anonKey: string): CCTransport {
       if (error) throw new Error(error.message);
       return data ? toSession(data as Row) : null;
     },
+    board: (code) => call<BoardView | null>('cc_board', { p_code: code }),
     join: (code, name, claim) => call<JoinResult>('cc_join', { p_code: code, p_name: name, p_claim: claim }),
     me: (code, token) => call<PlayerView | null>('cc_me', { p_code: code, p_token: token }),
     vote: (code, token, num) => call('cc_vote', { p_code: code, p_token: token, p_target: num }),

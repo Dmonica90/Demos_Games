@@ -1,5 +1,6 @@
-import { MERCHANT_ROLES, POINTS, RESCUE_SECTIONS, SALE_CRITERIA, SECTIONS } from './content';
+import { LIFE, MERCHANT_ROLES, MIN_PLAYERS, RESCUE_SECTIONS, SALE_CRITERIA, SECTIONS } from './content';
 import type {
+  BoardView,
   CCPlayer,
   CCState,
   HostView,
@@ -47,7 +48,8 @@ const open = (st: CCState) => {
 
 export function confirm(st: CCState, slots: Slot[], overflow: RoleId[]): CCState {
   if (st.session.status !== 'registro') throw new Error('Los roles ya se repartieron');
-  if (slots.length < 1) throw new Error('Registra al menos a una persona');
+  if (slots.length < MIN_PLAYERS) throw new Error(`Se juega con al menos ${MIN_PLAYERS} personas`);
+  if (!slots.some((x) => x.role === 'phishing')) throw new Error('Debe haber al menos un infiltrado');
   if (overflow.includes('phishing')) throw new Error('Quien llega tarde no puede ser phishing');
   return bump({ ...st, slots, overflow, session: { ...st.session, status: 'jugando', total: slots.length } });
 }
@@ -105,7 +107,7 @@ export function join(
     role: slot.role,
     decoy: slot.decoy,
     auditor: false,
-    points: 0,
+    life: LIFE.start,
     joinedAt: now,
   };
   return { state: bump({ ...st, players: [...st.players, player] }), result: { status: 'ok', token: newId } };
@@ -117,8 +119,10 @@ const playerOf = (st: CCState, token: string) => {
   return me;
 };
 
-const award = (st: CCState, ids: string[], pts: number): CCPlayer[] =>
-  st.session.pointsOn ? st.players.map((p) => (ids.includes(p.id) ? { ...p, points: p.points + pts } : p)) : st.players;
+const clamp = (n: number) => Math.max(0, Math.min(100, n));
+/** Changes a player's life bar, if the bars are on. */
+const lifeChange = (st: CCState, id: string, delta: number): CCPlayer[] =>
+  st.session.pointsOn ? st.players.map((p) => (p.id === id ? { ...p, life: clamp(p.life + delta) } : p)) : st.players;
 
 export function vote(st: CCState, token: string, targetNum: number): CCState {
   open(st);
@@ -132,7 +136,7 @@ export function vote(st: CCState, token: string, targetNum: number): CCState {
   return bump({
     ...st,
     votes: [...st.votes, { round, voterId: me.id, targetId: target.id }],
-    players: award(st, [me.id], POINTS.vote),
+    players: lifeChange(st, target.id, LIFE.perVote),
   });
 }
 
@@ -148,7 +152,6 @@ export function rescue(st: CCState, token: string, answer: string, id: string, n
   return bump({
     ...st,
     rescues: [...st.rescues, { id, playerId: me.id, section, auditor: me.auditor, answer: text, status: 'pendiente', at: now }],
-    players: award(st, [me.id], POINTS.rescueSent),
   });
 }
 
@@ -158,7 +161,7 @@ export function markRescue(st: CCState, rescueId: string, ok: boolean): CCState 
   if (!r) throw new Error('Ese rescate no existe');
   if (r.status !== 'pendiente') return st;
   const next = { ...st, rescues: st.rescues.map((x) => (x.id === rescueId ? { ...x, status: ok ? ('correcta' as const) : ('incorrecta' as const) } : x)) };
-  return bump(ok ? { ...next, players: award(st, [r.playerId], POINTS.rescueRight) } : next);
+  return bump({ ...next, players: lifeChange(st, r.playerId, ok ? LIFE.rescueRight : LIFE.rescueWrong) });
 }
 
 /** Voted out does not mean out: the player becomes an auditor and keeps playing. */
@@ -180,7 +183,6 @@ export function sale(st: CCState, token: string, sellerNum: number, criteria: st
   return bump({
     ...st,
     sales: [...st.sales, { id, merchantId: me.id, sellerId: seller.id, criteria: valid, convinced, at: now }],
-    players: award(st, [me.id, seller.id], POINTS.sale),
   });
 }
 
@@ -201,6 +203,16 @@ export function playerView(st: CCState, token: string): PlayerView | null {
     votedFor: mine ? (st.players.find((p) => p.id === mine.targetId)?.num ?? null) : null,
     rescues: st.rescues.filter((r) => r.playerId === me.id).map((r) => ({ section: r.section, auditor: r.auditor, status: r.status })),
     judged: st.sales.filter((s) => s.merchantId === me.id).map((s) => st.players.find((p) => p.id === s.sellerId)?.num ?? 0),
+  };
+}
+
+export function boardView(st: CCState): BoardView {
+  return {
+    session: st.session,
+    players: [...st.players]
+      .sort((a, b) => b.life - a.life || a.num - b.num)
+      .map((p) => ({ num: p.num, name: p.name, life: p.life, auditor: p.auditor, wasPhishing: p.auditor ? p.role === 'phishing' : null })),
+    voted: st.votes.filter((v) => v.round === st.session.voteRound).length,
   };
 }
 

@@ -1,4 +1,4 @@
-import type { CCSession, HostView, JoinResult, PlayerView, RoleId, SessionPatch, Slot } from '../types';
+import type { BoardView, CCSession, HostView, JoinResult, PlayerView, RoleId, SessionPatch, Slot } from '../types';
 
 /**
  * What Código Clip needs from its backend. Supabase for real sessions (every
@@ -16,6 +16,8 @@ export interface CCTransport {
   close(code: string, key: string): Promise<void>;
 
   getSession(code: string): Promise<CCSession | null>;
+  /** The projected screen: names and life bars, no roles or votes. */
+  board(code: string): Promise<BoardView | null>;
   join(code: string, name: string, claim: boolean): Promise<JoinResult>;
   me(code: string, token: string): Promise<PlayerView | null>;
   vote(code: string, token: string, targetNum: number): Promise<void>;

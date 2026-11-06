@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { cc } from './transport';
-import type { CCSession, HostView, PlayerView } from './types';
+import type { BoardView, CCSession, HostView, PlayerView } from './types';
 
 /**
  * Live views of a Código Clip session. Every change bumps the session's `rev`;
@@ -33,6 +33,8 @@ function useLive<T>(code: string, load: () => Promise<T>, deps: unknown[]) {
 }
 
 export const useCCSession = (code: string) => useLive<CCSession | null>(code, () => cc.getSession(code), [code]);
+
+export const useBoard = (code: string) => useLive<BoardView | null>(code, () => cc.board(code), [code]);
 
 export const useHostView = (code: string, key: string | null) =>
   useLive<HostView | null>(code, () => (key ? cc.hostView(code, key) : Promise.resolve(null)), [code, key]);

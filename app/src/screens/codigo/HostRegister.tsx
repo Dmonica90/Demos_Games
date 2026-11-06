@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { GROUP_LABEL, ROLES } from '../../codigo/content';
+import { GROUP_LABEL, MIN_PLAYERS, ROLES } from '../../codigo/content';
 import { ccStore } from '../../codigo/hooks';
 import { baraja, distribuir, infiltrados, overflowFor, sum } from '../../codigo/roles';
 import type { Counts } from '../../codigo/roles';
@@ -26,17 +26,19 @@ const ORDER: RoleId[] = [
  * Al confirmar se reparten los roles, una sola vez.
  */
 export function HostRegister() {
-  const [n, setN] = useState(12);
+  const [raw, setRaw] = useState('12');
+  const n = Math.round(Number(raw)) || 0;
+  const valid = n >= MIN_PLAYERS && n <= 80;
   const [counts, setCounts] = useState<Counts>(() => distribuir(12));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const total = sum(counts);
-  const suggested = useMemo(() => infiltrados(n), [n]);
+  const suggested = useMemo(() => infiltrados(Math.max(n, MIN_PLAYERS)), [n]);
 
-  const changeN = (value: number) => {
-    const v = Math.max(1, Math.min(80, Math.round(value) || 1));
-    setN(v);
-    setCounts(distribuir(v));
+  const changeN = (value: string) => {
+    setRaw(value);
+    const v = Math.round(Number(value));
+    if (v >= MIN_PLAYERS && v <= 80) setCounts(distribuir(v));
   };
   const step = (role: RoleId, d: number) => setCounts((c) => ({ ...c, [role]: Math.max(0, c[role] + d) }));
 
@@ -78,10 +80,10 @@ export function HostRegister() {
           <input
             id="cc-n"
             type="number"
-            min={1}
+            min={MIN_PLAYERS}
             max={80}
-            value={n}
-            onChange={(e) => changeN(Number(e.target.value))}
+            value={raw}
+            onChange={(e) => changeN(e.target.value)}
             className="min-h-14 w-32 rounded-2xl border-2 border-edge bg-panel px-4 text-3xl font-extrabold text-ink outline-none focus:border-accent"
           />
           <p className="text-sm">
@@ -89,7 +91,7 @@ export function HostRegister() {
             <strong className="text-[var(--cc-threat)]">
               {suggested} infiltrado{suggested === 1 ? '' : 's'} (phishing)
             </strong>
-            . Regla: hasta 9 → 1, de 10 a 15 → 2, de 16 a 20 → 3, 21 o más → 4.
+            . Regla: de 3 a 9 → 1, de 10 a 15 → 2, de 16 a 20 → 3, 21 o más → 4. Mínimo 3 personas.
           </p>
         </div>
 
@@ -129,13 +131,17 @@ export function HostRegister() {
             );
           })}
         </ul>
-        <p className={`mt-4 text-sm font-semibold ${total === n ? 'text-safe-ink' : 'text-alarm-ink'}`} aria-live="polite">
-          {total === n ? `Listo: ${total} roles para ${n} personas.` : `El reparto suma ${total}; deben ser ${n}.`}
+        <p className={`mt-4 text-sm font-semibold ${valid && total === n ? 'text-safe-ink' : 'text-alarm-ink'}`} aria-live="polite">
+          {!valid
+            ? `Se juega con al menos ${MIN_PLAYERS} personas (máximo 80).`
+            : total === n
+              ? `Listo: ${total} roles para ${n} personas.`
+              : `El reparto suma ${total}; deben ser ${n}.`}
         </p>
       </section>
 
       <div className="mt-6 flex flex-wrap items-center gap-4">
-        <Button onClick={confirm} disabled={busy || total !== n || counts.phishing < 1} sfx="confirm">
+        <Button onClick={confirm} disabled={busy || !valid || total !== n || counts.phishing < 1} sfx="confirm">
           {busy ? 'Repartiendo…' : 'Confirmar y repartir roles'}
         </Button>
         {cc.kind === 'local' && (
