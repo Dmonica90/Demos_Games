@@ -88,6 +88,16 @@ export const urgenteConfig: V2CaseConfig = {
       '(?:manana|despues|luego) (?:sigo|continuo|puedo seguir|retomo)',
       'puedo (?:terminarlo|hacerlo|entregarlo|sacarlo) (?:hoy|primero|manana)',
     ),
+    // Says which piece goes first and what waits: "lo nuevo va primero y el reporte lo muevo al lunes".
+    priority: family(
+      true,
+      'lo (?:nuevo|nueva|urgente|esto|eso) (?:va|vamos a hacer|lo hago|lo entrego|lo saco) primero',
+      'primero (?:lo|la|el) (?:nuevo|nueva|urgente|esto|eso)',
+      'primero (?:esto|eso)',
+      'lo (?:demas|resto) (?:lo |se )?(?:ajust\\w*|despues|luego|manana|acomod\\w*)',
+      'el (?:reporte|resto|otro|otra|mensual|pendiente) (?:lo |la )?(?:muevo|paso|ajusto|dejo|recorro|pospongo)',
+      'primero (?:lo|la|el) (?:que urge|que es urgente|de hoy)',
+    ),
     decision_ask: family(
       true,
       'que (?:prefieres|priorizo|va primero|es mas importante|muevo|dejo para despues)',
@@ -160,7 +170,7 @@ export const urgenteConfig: V2CaseConfig = {
     { id: 'options_proposed', label: 'Propuso opciones', from: ['options'] },
     { id: 'priority_requested', label: 'Pidió priorizar', from: ['decision_ask'] },
     { id: 'empathy_shown', label: 'Reconoció la urgencia', from: ['empathy'], needsGoodwill: true },
-    { id: 'priority_decided', label: 'Prioridad decidida', from: [] },
+    { id: 'priority_decided', label: 'Prioridad decidida', from: ['priority'] },
     { id: 'deadline_defined', label: 'Fecha definida', from: ['deadline'], unless: ['capacity'] },
     { id: 'overcommitted', label: 'Aceptó sin explicar', from: ['blind_accept'], unless: ['capacity', 'options', 'risk'] },
     { id: 'agreement_reached', label: 'Acuerdo', from: [] },
@@ -185,6 +195,7 @@ export const urgenteConfig: V2CaseConfig = {
     { signal: 'risk', delta: { willingness: 10 } },
     { signal: 'options', delta: { willingness: 12, stress: -10, trust: 5 } },
     { signal: 'decision_ask', delta: { trust: 5, willingness: 5 } },
+    { signal: 'priority', delta: { willingness: 10, trust: 5 } },
     { signal: 'blind_accept', unless: ['capacity', 'options', 'risk'], delta: { stress: -15, trust: 5 } },
     { signal: 'reject', unless: ['capacity', 'options', 'risk'], delta: { defensiveness: 25, trust: -15, willingness: -10 } },
     { signal: 'vague', delta: { stress: 5 } },
