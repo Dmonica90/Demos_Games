@@ -1,4 +1,11 @@
-# Simulador de comunicación escrita
+# Juegos de capacitación Clip
+
+Al abrir el sitio aparece un **menú** con dos juegos:
+
+1. **Simulador de comunicación escrita** (abajo).
+2. **Código Clip**: juego de inducción tipo Lobo/Among Us. Guía: [`docs/codigo-clip.md`](docs/codigo-clip.md).
+
+## Simulador de comunicación escrita
 
 Una competencia grupal en vivo para practicar cómo comunicar situaciones
 difíciles del trabajo por escrito. El host elige un caso y proyecta un código QR;
@@ -18,7 +25,9 @@ Cómo correrlo, cómo funciona y cómo editar los casos: [`app/README.md`](app/R
 
 | Para | URL |
 | --- | --- |
-| Host (proyectar) | `https://simulador-comunicacion.vercel.app/` |
+| Menú | `https://simulador-comunicacion.vercel.app/` |
+| Host del simulador (proyectar) | `https://simulador-comunicacion.vercel.app/#/simulador` |
+| Host de Código Clip | `https://simulador-comunicacion.vercel.app/#/codigo` |
 | Participantes | las abre el QR (`…/#/jugar/CODIGO`); el enlace también aparece bajo el QR |
 | Laboratorio del motor | `https://simulador-comunicacion.vercel.app/#/laboratorio` |
 

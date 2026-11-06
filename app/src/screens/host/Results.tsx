@@ -42,7 +42,7 @@ export function Results({ def, players }: HostProps) {
             <span className="text-brand">{def.title.split(' ').slice(-1)}</span>
           </h1>
         </div>
-        <Button tone="ghost" onClick={() => go('/')}>
+        <Button tone="ghost" onClick={() => go('/simulador')}>
           Nueva sesión
         </Button>
       </header>

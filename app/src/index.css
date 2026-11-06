@@ -64,6 +64,18 @@
   --clip-gradient-h: linear-gradient(90deg, #ce0058 0%, #fc4c02 100%);
 }
 
+/*
+ * Código Clip · PROVISIONAL: paleta y tipografía sin validar con Marca. Se
+ * apoyan en los tokens que ya usa la app; cámbialas aquí cuando Marca valide.
+ */
+:root {
+  --cc-primary: var(--color-accent); /* PROVISIONAL */
+  --cc-ally: #1d4ed8; /* PROVISIONAL: aliados, auditores */
+  --cc-threat: var(--color-alarm-ink); /* PROVISIONAL: phishing */
+  --cc-pending: var(--color-warn-ink); /* PROVISIONAL: dato pendiente de validar */
+  --cc-font: var(--font-display); /* PROVISIONAL */
+}
+
 html {
   color-scheme: light;
 }

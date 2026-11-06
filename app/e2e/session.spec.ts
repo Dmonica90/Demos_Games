@@ -24,7 +24,7 @@ async function say(page: Page, text: string) {
 test('una sesión completa: QR, sala, conversación, dashboard y ranking', async ({ context }) => {
   const host = await context.newPage();
   await host.setViewportSize({ width: 1440, height: 900 });
-  await host.goto('/?local=1&fast=1#/');
+  await host.goto('/?local=1&fast=1#/simulador');
   await host.getByText('La entrega pendiente').click();
   await host.getByRole('button', { name: 'Crear sesión y mostrar QR' }).click();
 
