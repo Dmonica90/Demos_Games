@@ -53,7 +53,11 @@ la memoria, la tarea y el ánimo del compañero, con respuestas de prueba para c
 
 | URL | Pantalla |
 | --- | --- |
-| `#/` | Host: elegir caso y crear sesión |
+| `#/` | Menú: elegir juego |
+| `#/simulador` | Host: elegir caso y crear sesión |
+| `#/codigo` | Código Clip · host: registrar participantes y repartir roles |
+| `#/codigo/host/K7P2Q` | Código Clip · host: secciones, votos, rescates, venta, banco de respuestas |
+| `#/codigo/jugar/K7P2Q` | Código Clip · celular (a donde lleva su QR) |
 | `#/host/K7P2Q` | Host: sala con QR → dashboard en vivo → resultados |
 | `#/jugar/K7P2Q` | Participante (a donde lleva el QR) |
 | `#/jugar` | Participante sin QR: escribe el código |

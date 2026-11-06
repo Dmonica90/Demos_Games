@@ -44,6 +44,7 @@ export type SignalStat = {
 export function signalStats(def: CaseDef, players: Player[]) {
   const stats = new Map<SignalId, SignalStat>();
   const best = new Map<SignalId, number>();
+  const worst = new Map<SignalId, number>();
   for (const p of players) {
     if (!p.convo) continue;
     const seen = new Set<SignalId>();
@@ -54,6 +55,12 @@ export function signalStats(def: CaseDef, players: Player[]) {
         seen.add(s);
         if (POSITIVE.includes(s) && m.category === 'effective' && m.quality > (best.get(s) ?? -1)) {
           best.set(s, m.quality);
+          const stat = stats.get(s) ?? { signal: s, people: 0, withAgreement: 0 };
+          stats.set(s, { ...stat, example: { nickname: p.nickname, text: m.text } });
+        }
+        // For mistakes, the message where it hurt most.
+        if (NEGATIVE.includes(s) && m.quality < (worst.get(s) ?? 101)) {
+          worst.set(s, m.quality);
           const stat = stats.get(s) ?? { signal: s, people: 0, withAgreement: 0 };
           stats.set(s, { ...stat, example: { nickname: p.nickname, text: m.text } });
         }

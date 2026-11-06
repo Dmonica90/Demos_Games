@@ -1,29 +1,36 @@
+import { motion } from 'framer-motion';
 import { useState } from 'react';
-import { COLOR_LABEL, COLOR_SHORT, COLOR_TEXT, ScoreBar } from '../../components/game';
+import { AnimatedEmoji } from '../../components/AnimatedEmoji';
+import type { EmojiName } from '../../components/AnimatedEmoji';
+import { COLOR_BG, COLOR_LABEL, COLOR_SHORT, COLOR_TEXT } from '../../components/game';
 import { Button, Dialog } from '../../components/ui';
 import { colorCounts, ranking, signalStats } from '../../engine/analysis';
 import type { Ranked } from '../../engine/analysis';
-import { SIGNAL_LABEL } from '../../engine/signals';
-import { QUADRANT_LABEL } from '../../engine/v2/engine';
+import type { Color } from '../../engine/conversation';
+import { SIGNAL_LABEL, SIGNAL_TIP } from '../../engine/signals';
 import { go } from '../../router';
 import { Transcript } from '../Transcript';
 import type { HostProps } from './props';
 
 const MEDAL = ['🥇', '🥈', '🥉'];
+/** Height in px of the column area (h-64); a score of 100 fills it. */
+const BAR_AREA = 256;
+/** Height in px of the medal + name row under the columns. */
+const NAME_ROW = 48;
+const FACE: Record<Color, EmojiName> = { green: 'happy', yellow: 'neutral', red: 'angry' };
 
+/**
+ * For the projector: one column per person (height = final score, colour =
+ * their bar, their face on top), and the single most common mistake.
+ */
 export function Results({ def, players }: HostProps) {
   const ranked = ranking(players);
   const counts = colorCounts(players);
-  const { strengths, mistakes } = signalStats(def, players);
+  const { mistakes } = signalStats(def, players);
+  const top = mistakes[0];
   const agreements = ranked.filter((r) => r.convo.mission).length;
   const [open, setOpen] = useState<Ranked | null>(null);
-  // Quote each message once, under the first strategy it illustrates.
-  const quoted = new Set<string>();
-  const topStrengths = strengths.slice(0, 5).map((s) => {
-    if (!s.example || quoted.has(s.example.text)) return { ...s, example: undefined };
-    quoted.add(s.example.text);
-    return s;
-  });
+  const crowded = ranked.length > 12;
 
   return (
     <main className="screen-in mx-auto max-w-7xl px-4 py-10 sm:px-8">
@@ -35,7 +42,7 @@ export function Results({ def, players }: HostProps) {
             <span className="text-brand">{def.title.split(' ').slice(-1)}</span>
           </h1>
         </div>
-        <Button tone="ghost" onClick={() => go('/')}>
+        <Button tone="ghost" onClick={() => go('/simulador')}>
           Nueva sesión
         </Button>
       </header>
@@ -43,111 +50,109 @@ export function Results({ def, players }: HostProps) {
       <section aria-label="Resumen" className="panel-dark mt-8 grid gap-6 rounded-3xl p-6 sm:grid-cols-4 sm:p-8">
         <Stat label="Participantes" value={ranked.length} />
         <Stat label="Lograron acuerdo" value={`${agreements}/${ranked.length}`} />
-        {(['green', 'red'] as const).map((c) => (
-            <Stat key={c} label={`Terminaron en ${COLOR_SHORT[c].toLowerCase()}`} value={counts[c]} tone={c === 'red' ? 'text-[#fca5a5]' : undefined} />
-          ))}
+        <Stat label="Terminaron en verde" value={counts.green} />
+        <Stat label="Terminaron en rojo" value={counts.red} tone="text-[#fca5a5]" />
       </section>
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
-        <section>
+      <section className="card mt-8 p-6 sm:p-8">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="text-2xl">Ranking</h2>
           <p className="text-sm text-ink-dim">
-            Puntaje final = 70% barra de comunicación + 30% si logró el acuerdo. Toca a alguien para ver su conversación.
+            Puntaje final = 70% barra + 30 si logró el acuerdo (✔). Toca una columna para ver la conversación.
           </p>
-          <ol className="mt-4 grid gap-2" aria-label="Ranking">
-            {ranked.map((r) => (
-              <li key={r.player.id}>
-                <button
-                  type="button"
-                  onClick={() => setOpen(r)}
-                  className="panel grid w-full grid-cols-[2.5rem_minmax(0,1fr)_7rem_3rem] items-center gap-3 rounded-2xl border-2 px-4 py-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-accent hover:shadow-brand-soft"
-                >
-                  <span className="text-center text-xl">{MEDAL[r.place - 1] ?? r.place}</span>
-                  <span className="min-w-0">
-                    <span className="block truncate font-bold text-ink">{r.player.nickname}</span>
-                    <span className="text-xs text-ink-dim">
-                      {r.convo.mission ? '✓ Acuerdo' : '✗ Sin acuerdo'} · {r.convo.turn} turnos ·{' '}
-                      <span className={COLOR_TEXT[r.convo.color]}>{COLOR_SHORT[r.convo.color]}</span>
-                      {r.convo.quadrant && <> · {QUADRANT_LABEL[r.convo.quadrant].title}</>}
-                    </span>
-                  </span>
-                  <ScoreBar points={r.convo.points} color={r.convo.color} size="sm" label={`Barra de ${r.player.nickname}`} />
-                  <span className="text-right text-2xl font-extrabold text-ink">{r.score}</span>
-                </button>
-              </li>
-            ))}
-          </ol>
-        </section>
-
-        <div className="grid content-start gap-6">
-          <section className="card p-6">
-            <p className="eyebrow">01</p>
-            <h2 className="mt-1 text-xl">
-              Estrategias que <span className="text-brand">funcionaron</span>
-            </h2>
-            {strengths.length === 0 ? (
-              <p className="mt-2 text-sm text-ink-dim">Nadie mostró todavía una estrategia efectiva.</p>
-            ) : (
-              <ul className="mt-3 grid gap-3">
-                {topStrengths.map((s) => (
-                  <li key={s.signal}>
-                    <p className="font-bold text-ink">
-                      {SIGNAL_LABEL[s.signal]}{' '}
-                      <span className="text-sm font-normal text-ink-dim">
-                        · {s.people} persona{s.people === 1 ? '' : 's'}, {s.withAgreement} con acuerdo
-                      </span>
-                    </p>
-                    {s.example && (
-                      <blockquote className="mt-2 rounded-2xl bg-accent-soft px-4 py-3 text-sm text-accent-deep italic">
-                        “{s.example.text}” — {s.example.nickname}
-                      </blockquote>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          <section className="card p-6">
-            <p className="eyebrow">02</p>
-            <h2 className="mt-1 text-xl">
-              Errores <span className="text-brand">frecuentes</span>
-            </h2>
-            {mistakes.length === 0 ? (
-              <p className="mt-2 text-sm text-ink-dim">Sin errores frecuentes. ¡Bien hecho!</p>
-            ) : (
-              <ul className="mt-3 grid gap-2">
-                {mistakes.slice(0, 5).map((s) => (
-                  <li key={s.signal} className="flex items-center justify-between gap-4 rounded-xl border-2 border-edge px-4 py-2">
-                    <span className="font-medium text-ink">{SIGNAL_LABEL[s.signal]}</span>
-                    <span className="text-sm font-bold text-alarm-ink tabular-nums">
-                      {Math.round((s.people / Math.max(1, ranked.length)) * 100)}% del grupo
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          <section className="card p-6">
-            <p className="eyebrow">03</p>
-            <h2 className="mt-1 text-xl">Qué observar</h2>
-            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
-              {def.observe.map((o) => (
-                <li key={o}>{o}</li>
-              ))}
-            </ul>
-            <h2 className="mt-6 text-xl">
-              <span className="text-brand">Aprendizajes</span>
-            </h2>
-            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
-              {def.lessons.map((l) => (
-                <li key={l}>{l}</li>
-              ))}
-            </ul>
-          </section>
         </div>
-      </div>
+
+        <div className={`mt-6 ${crowded ? 'overflow-x-auto pb-2' : ''}`}>
+          <div className="relative" style={{ minWidth: crowded ? ranked.length * 76 : undefined }}>
+            {/* Y axis guides, over the column area (above the 48px name row). */}
+            <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 h-64" style={{ bottom: NAME_ROW }}>
+              {[100, 50, 0].map((v) => (
+                <div
+                  key={v}
+                  className="absolute inset-x-0 flex items-center gap-2 border-t border-dashed border-edge"
+                  style={{ top: `${100 - v}%` }}
+                >
+                  <span className="-mt-3 text-[0.65rem] text-ink-dim">{v}</span>
+                </div>
+              ))}
+            </div>
+
+            <ol aria-label="Ranking" className="relative flex items-end gap-3 pl-8 sm:gap-5">
+              {ranked.map((r, i) => {
+                const label = `${r.player.nickname}, ${r.score} puntos, ${COLOR_SHORT[r.convo.color]}, ${
+                  r.convo.mission ? 'con acuerdo' : 'sin acuerdo'
+                }`;
+                return (
+                  <li key={r.player.id} className="flex min-w-14 flex-1 flex-col items-center" style={{ maxWidth: 120 }}>
+                    <button
+                      type="button"
+                      onClick={() => setOpen(r)}
+                      aria-label={label}
+                      className="group flex w-full flex-col items-center"
+                    >
+                      {/* Face and score ride on top of the column. */}
+                      <span className="flex w-full flex-col items-center justify-end" style={{ height: BAR_AREA + 72 }}>
+                        <AnimatedEmoji name={FACE[r.convo.color]} size={crowded ? 28 : 36} />
+                        <span className="mt-1 mb-1 text-lg font-extrabold leading-none text-ink">
+                          {r.score}
+                          {r.convo.mission && <span className="ml-0.5 text-safe-ink">✔</span>}
+                        </span>
+                        <motion.span
+                          initial={{ height: 0 }}
+                          animate={{ height: Math.round((Math.max(3, r.score) / 100) * BAR_AREA) }}
+                          transition={{ type: 'spring', stiffness: 80, damping: 16, delay: i * 0.08 }}
+                          className={`block w-full max-w-16 rounded-t-2xl ${COLOR_BG[r.convo.color]} shadow-sm transition-transform group-hover:-translate-y-1`}
+                        />
+                      </span>
+                      <span className="flex w-full flex-col items-center justify-start pt-1" style={{ height: NAME_ROW }}>
+                        <span className="text-lg leading-none">
+                          {MEDAL[i] ?? <span className="text-sm text-ink-dim">{i + 1}</span>}
+                        </span>
+                        <span className="mt-1 w-full truncate text-center text-sm font-bold text-ink">{r.player.nickname}</span>
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      <section className="card mt-8 p-6 sm:p-8" aria-label="El error más común">
+        <p className="eyebrow">Análisis del grupo</p>
+        <h2 className="mt-1 text-2xl">
+          El error más <span className="text-brand">común</span>
+        </h2>
+        {top ? (
+          <div className="mt-4 grid gap-4 sm:grid-cols-[auto_1fr] sm:items-start">
+            <div className="rounded-3xl bg-[#fef2f2] px-6 py-5 text-center">
+              <p className="text-5xl font-extrabold text-alarm-ink">
+                {Math.round((top.people / Math.max(1, ranked.length)) * 100)}%
+              </p>
+              <p className="text-xs font-semibold text-alarm-ink">del grupo</p>
+            </div>
+            <div>
+              <p data-testid="top-mistake" className="text-xl font-bold text-ink">
+                {SIGNAL_LABEL[top.signal]}
+              </p>
+              {top.example && (
+                <blockquote className="mt-2 rounded-2xl bg-panel-2 px-4 py-3 text-sm italic">
+                  “{top.example.text}”
+                </blockquote>
+              )}
+              {SIGNAL_TIP[top.signal] && (
+                <p className="mt-3 rounded-2xl bg-accent-soft px-4 py-3 text-sm text-accent-deep">
+                  <strong>En su lugar: </strong>
+                  {SIGNAL_TIP[top.signal]}
+                </p>
+              )}
+            </div>
+          </div>
+        ) : (
+          <p className="mt-3 text-lg">¡Nadie cometió errores frecuentes! 🎉</p>
+        )}
+      </section>
 
       <Dialog open={open !== null} onClose={() => setOpen(null)} labelledBy="transcript-title">
         {open && (

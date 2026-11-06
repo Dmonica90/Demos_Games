@@ -24,13 +24,14 @@ async function say(page: Page, text: string) {
 test('una sesión completa: QR, sala, conversación, dashboard y ranking', async ({ context }) => {
   const host = await context.newPage();
   await host.setViewportSize({ width: 1440, height: 900 });
-  await host.goto('/?local=1&fast=1#/');
+  await host.goto('/?local=1&fast=1#/simulador');
   await host.getByText('La entrega pendiente').click();
   await host.getByRole('button', { name: 'Crear sesión y mostrar QR' }).click();
 
   const code = (await host.getByTestId('session-code').textContent())!.trim();
   expect(code).toMatch(/^[A-Z0-9]{5}$/);
   await expect(host.getByRole('img', { name: /Código QR/ })).toBeVisible();
+  await expect(host.getByTestId('join-link')).toContainText(`#/jugar/${code}`);
   if (SHOTS) await host.screenshot({ path: `${SHOTS}/1-host-lobby.png` });
 
   // The QR encodes this URL; the phones open it.
@@ -54,6 +55,10 @@ test('una sesión completa: QR, sala, conversación, dashboard y ranking', async
   await say(ana, 'Sí, perfecto, gracias.');
   await expect(ana.getByText('¡Misión cumplida')).toBeVisible();
   await expect(ana.getByTestId('quadrant')).toContainText('Misión resuelta eficazmente');
+  // The detail stays folded until asked for.
+  await expect(ana.getByText('Tu evaluación por')).toBeHidden();
+  await ana.getByRole('button', { name: /Ver resultado detallado/ }).click();
+  await expect(ana.getByText('Tu evaluación por')).toBeVisible();
   if (SHOTS) await ana.screenshot({ path: `${SHOTS}/4-phone-done.png`, fullPage: true });
 
   // Beto: vague, then recovers into yellow.
@@ -78,10 +83,13 @@ test('una sesión completa: QR, sala, conversación, dashboard y ranking', async
   await expect(ranking.nth(2)).toContainText('Caro');
   // Not writing at all ends in red with 0 points, below everyone who tried.
   await expect(ranking.nth(3)).toContainText('Dani');
-  await expect(ranking.nth(3)).toContainText('Rojo');
+  await expect(ranking.nth(3).getByRole('button')).toHaveAccessibleName(/Dani, 0 puntos, Rojo, sin acuerdo/);
   await expect(dani.getByText('no enviaste ningún mensaje')).toBeVisible();
-  await expect(host.getByText('Culpa o reclama')).toBeVisible();
-  if (SHOTS) await host.screenshot({ path: `${SHOTS}/6-host-results.png`, fullPage: true });
+  await expect(host.getByTestId('top-mistake')).toBeVisible();
+  if (SHOTS) {
+    await host.waitForTimeout(1500); // let the columns finish growing
+    await host.screenshot({ path: `${SHOTS}/6-host-results.png`, fullPage: true });
+  }
 
   // The others' phones close when the host ends the activity.
   await expect(beto.getByText('Conversación terminada')).toBeVisible();
@@ -121,6 +129,6 @@ test('el laboratorio también prueba los casos 2 y 3', async ({ page }) => {
   await page.getByRole('button', { name: 'Hechos y escucha' }).click();
   await page.getByRole('button', { name: 'Enviar' }).click();
   await expect(page.locator('[data-memory="perspective_heard"]')).toHaveAttribute('data-on', 'true');
-  await expect(page.getByText('Gracias por preguntar')).toBeVisible();
+  await expect(page.getByText('Gracias por querer escucharme')).toBeVisible();
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/8-laboratorio-caso3.png`, fullPage: true });
 });

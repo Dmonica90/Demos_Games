@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import type { CaseDef } from '../../cases/types';
 import { Brand, COLOR_LABEL, COLOR_TEXT, ScoreBar } from '../../components/game';
+import { Button } from '../../components/ui';
 import type { Conversation } from '../../engine/conversation';
 import { criteriaAverages, finalScore, isSilent } from '../../engine/conversation';
 import { CRITERIA } from '../../engine/score';
@@ -18,6 +20,7 @@ export function Done({ def, player, convo }: { def: CaseDef; player: Player; con
   const averages = criteriaAverages(convo);
   const weakest = [...CRITERIA].sort((a, b) => averages[a.id] - averages[b.id]).slice(0, 2);
   const score = finalScore(convo);
+  const [showDetail, setShowDetail] = useState(false);
 
   return (
     <main className="screen-in mx-auto max-w-2xl px-4 py-8">
@@ -68,6 +71,22 @@ export function Done({ def, player, convo }: { def: CaseDef; player: Player; con
         </div>
       </section>
 
+      <div className="mt-6 flex justify-center">
+        <Button
+          tone="ghost"
+          aria-expanded={showDetail}
+          aria-controls="detail"
+          onClick={() => {
+            setShowDetail((v) => !v);
+            setTimeout(() => document.getElementById('detail')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+          }}
+        >
+          {showDetail ? 'Ocultar resultado detallado' : 'Ver resultado detallado 🔍'}
+        </Button>
+      </div>
+
+      {showDetail && (
+        <div id="detail" className="screen-in">
       <section className="card mt-6 p-6">
         <p className="eyebrow">01</p>
         <h2 className="mt-1 text-xl">
@@ -106,6 +125,9 @@ export function Done({ def, player, convo }: { def: CaseDef; player: Player; con
           <Transcript def={def} convo={convo} showSignals />
         </div>
       </section>
+
+        </div>
+      )}
 
       <p className="mt-8 text-center text-sm text-ink-dim">Mira la pantalla del host para ver el ranking del grupo.</p>
     </main>

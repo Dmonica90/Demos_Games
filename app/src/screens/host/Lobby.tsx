@@ -40,6 +40,10 @@ export function Lobby({ session, def, players, hostKey }: HostProps) {
           dangerouslySetInnerHTML={{ __html: svg }}
         />
         <p className="mt-5 text-sm font-medium text-ink">Escanea el QR con la cámara de tu celular 📲</p>
+        <p className="mt-3 text-xs text-ink-dim">¿No puedes escanearlo? Entra a</p>
+        <p data-testid="join-link" className="mt-1 rounded-full bg-panel-2 px-4 py-1.5 font-mono text-sm break-all text-ink">
+          {url.replace(/^https?:\/\//, '')}
+        </p>
         <p className="mt-4 text-xs font-bold tracking-[0.14em] text-ink-dim uppercase">Código de la sesión</p>
         <p data-testid="session-code" className="text-brand mt-1 text-6xl font-extrabold tracking-[0.18em]">
           {session.code}

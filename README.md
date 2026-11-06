@@ -1,4 +1,11 @@
-# Simulador de comunicación escrita
+# Juegos de capacitación Clip
+
+Al abrir el sitio aparece un **menú** con dos juegos:
+
+1. **Simulador de comunicación escrita** (abajo).
+2. **Código Clip**: juego de inducción tipo Lobo/Among Us. Guía: [`docs/codigo-clip.md`](docs/codigo-clip.md).
+
+## Simulador de comunicación escrita
 
 Una competencia grupal en vivo para practicar cómo comunicar situaciones
 difíciles del trabajo por escrito. El host elige un caso y proyecta un código QR;
@@ -14,17 +21,18 @@ supabase/migrations/       Base de datos y tiempo real (Supabase).
 
 Cómo correrlo, cómo funciona y cómo editar los casos: [`app/README.md`](app/README.md).
 
-**Direcciones** (una vez que el repositorio se llame `demo`):
+**Direcciones** (publicado en Vercel; cada merge a `main` se publica solo):
 
 | Para | URL |
 | --- | --- |
-| Host (proyectar) | `https://dmonica90.github.io/demo/` |
-| Participantes | las abre el QR (`…/demo/#/jugar/CODIGO`) |
-| Laboratorio del motor | `https://dmonica90.github.io/demo/#/laboratorio` |
+| Menú | `https://simulador-comunicacion.vercel.app/` |
+| Host del simulador (proyectar) | `https://simulador-comunicacion.vercel.app/#/simulador` |
+| Host de Código Clip | `https://simulador-comunicacion.vercel.app/#/codigo` |
+| Participantes | las abre el QR (`…/#/jugar/CODIGO`); el enlace también aparece bajo el QR |
+| Laboratorio del motor | `https://simulador-comunicacion.vercel.app/#/laboratorio` |
 
-> Al renombrar el repositorio, GitHub redirige el código pero **no** la página:
-> la dirección anterior (`…/Shield_Defense/`) deja de funcionar. Después de
-> renombrar, vuelve a publicar con **Actions → Test and deploy → Run workflow**.
+> GitHub Pages (`dmonica90.github.io/Demos_Games`) es opcional: se puede apagar en
+> **Settings → Pages → Source: None** y dejar solo Vercel.
 
 ## Usarlo en Articulate
 
@@ -32,7 +40,7 @@ El curso solo necesita mostrar la **pantalla del host**; los participantes
 juegan en su celular con el QR.
 
 - **Rise 360:** agrega un bloque **Multimedia → Embed** (o *Code*), pega
-  `https://dmonica90.github.io/demo/` y dale una altura de unos 800 px.
+  `https://simulador-comunicacion.vercel.app/` y dale una altura de unos 800 px.
 - **Storyline:** **Insert → Web Object**, pega la misma dirección. Para
   proyectar, elige *Open in a new browser window*: el QR y el dashboard se ven
   mejor a pantalla completa. *Display in slide* también funciona.
@@ -54,15 +62,16 @@ host se hablen en tiempo real usamos **Supabase** (plan gratuito).
    [`app/src/config.ts`](app/src/config.ts). Son públicos por diseño: viajan en
    la página; la seguridad la dan las reglas de la base de datos. **Nunca** pongas
    la *Secret key* (`sb_secret_…`) en el repositorio.
-5. **Settings → Pages → Source: GitHub Actions**. Cada push a `main` publica en
-   `https://dmonica90.github.io/Shield_Defense/`.
+4. **Publicación:** el proyecto `simulador-comunicacion` de Vercel está conectado
+   a este repositorio (carpeta `app`); cada merge a `main` publica en
+   `https://simulador-comunicacion.vercel.app/`.
 
 ## Cómo llega el QR al celular
 
 - El host abre el sitio, elige un caso y pulsa **Crear sesión**: se genera un
   código de 5 caracteres (p. ej. `K7P2Q`).
-- El QR apunta a `https://dmonica90.github.io/Shield_Defense/#/jugar/K7P2Q`. La
-  ruta va después de `#` para que GitHub Pages siempre sirva la misma página.
+- El QR apunta a `https://simulador-comunicacion.vercel.app/#/jugar/K7P2Q`. La
+  ruta va después de `#` para que cualquier hosting estático sirva la misma página.
 - El celular abre esa dirección, pide un nickname y aparece en la sala del host.
   Debajo del QR también se muestran el enlace y el código, para quien prefiera
   escribirlo.

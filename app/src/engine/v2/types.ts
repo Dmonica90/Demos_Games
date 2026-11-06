@@ -22,6 +22,8 @@ export type Analysis = {
   partial?: string;
   /** When two times are given, the first is for the partial delivery ("hoy"). */
   partialWhen?: string;
+  /** Every time expression, in order. */
+  times: string[];
   words: number;
 };
 

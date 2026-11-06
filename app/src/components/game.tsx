@@ -101,10 +101,10 @@ export function Avatar({ initials, className = '' }: { initials: string; classNa
   );
 }
 
-export function Brand({ className = '' }: { className?: string }) {
+export function Brand({ className = '', label = 'Simulador de comunicación escrita' }: { className?: string; label?: string }) {
   return (
     <p className={`eyebrow ${className}`}>
-      Simulador de comunicación escrita
+      {label}
     </p>
   );
 }

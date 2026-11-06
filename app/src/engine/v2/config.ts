@@ -1,10 +1,20 @@
-import type { Character, Closing, Slots } from './types';
+import type { Character, Closing, Memory, Slots } from './types';
 
 /** One thing the character can say; the id makes it never repeat. */
-export type Line = { id: string; text: string };
+export type Line = {
+  id: string;
+  text: string;
+  /** Only said when this holds (e.g. "the rest later" only if there is a partial delivery). */
+  when?: (m: Memory) => boolean;
+};
 export type Tone = { normal: Line[]; guarded: Line[] };
 
-export type Family = { patterns: RegExp; negatable: boolean };
+export type Family = {
+  patterns: RegExp;
+  negatable: boolean;
+  /** Only counts in a message that asks something ("¿cómo te sientes?", not "entiendo cómo te sientes"). */
+  requiresQuestion?: boolean;
+};
 
 /** A fact the character remembers, switched on by any of these signals. */
 export type FlagDef = {
@@ -63,6 +73,8 @@ export type V2CaseConfig = {
   quietReactions?: string[];
   /** Said when a need was already asked every way, instead of repeating. */
   stall: Line[];
+  /** A neutral "I hear you" before the next question, when a long message matched nothing. */
+  acknowledge: Line[];
   /** Signals that give a message substance (so it is not "vague"). */
   concrete: { signal: string; minStrength?: number }[];
   /** For scoring: a case signal counts as one of the common ones. */
