@@ -130,6 +130,8 @@ export const FAMILIES: Record<V2Signal, Family> = {
       'avance parcial',
       'por partes',
       'una parte',
+      'primer(?:a)? parte',
+      'segund[ao] parte',
       'parcial\\w*',
       'divid\\w*',
       'el resto (?:despues|manana|luego|mas tarde)',
@@ -247,7 +249,7 @@ const GENERIC =
 
 /** Extracted from the original text (case-insensitive), so names keep their capitals and accents. */
 const DELIVERABLE =
-  /(?:necesito|ocupo|me falta|me hace falta|requiero|env[ií]a(?:me|r(?:me)?)?|manda(?:me|r(?:me)?)?|m[aá]ndame|pasa(?:me|r(?:me)?)?|p[aá]same|entrega(?:me|r(?:me)?)?|entr[eé]game|compart(?:e|ir)(?:me)?|mandes|env[ií]es|pases)\s+((?:los|las|el|la|esos|esas|ese|esa|tus|tu)\s+\p{L}+(?:\s+(?:de|del|para)\s+(?:la\s+|el\s+|los\s+|las\s+)?\p{L}+)?)/iu;
+  /(?:necesito|ocupo|me falta|me hace falta|requiero|env[ií]a(?:me|r(?:me)?)?|manda(?:me|r(?:me)?)?|m[aá]ndame|pasa(?:me|r(?:me)?)?|p[aá]same|entrega(?:me|r(?:me)?)?|entr[eé]game|compart(?:e|ir)(?:me)?|mandes|env[ií]es|pases)(?:\s+(?:hoy|manana|mañana|ya|ahorita))?\s+((?:los|las|el|la|esos|esas|ese|esa|tus|tu)\s+\p{L}+(?:\s+(?:de|del|para)\s+(?:la\s+|el\s+|los\s+|las\s+)?\p{L}+)?)/iu;
 
 const TIME_WORD = '(?:\\d{1,2}(?::\\d{2})?\\s?(?:am|pm|hrs?|horas)?|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce)';
 const DEADLINE = new RegExp(
