@@ -16,7 +16,8 @@ El juego es un medio, no la meta. Lo que se busca es que cada quien salga conoci
 Código Clip usa el mismo Supabase que el simulador, pero con tablas propias. En Supabase → **SQL Editor** → **New query**, pega y corre, en orden:
 
 1. [`supabase/migrations/002_codigo_clip.sql`](../supabase/migrations/002_codigo_clip.sql) (ya la corriste).
-2. [`supabase/migrations/003_codigo_clip_v2.sql`](../supabase/migrations/003_codigo_clip_v2.sql): barras de vida, mínimo 3 jugadores y la pantalla pública.
+2. [`supabase/migrations/003_codigo_clip_v2.sql`](../supabase/migrations/003_codigo_clip_v2.sql): barras de vida, mínimo 3 jugadores y la pantalla pública (ya la corriste).
+3. [`supabase/migrations/004_codigo_clip_v3.sql`](../supabase/migrations/004_codigo_clip_v3.sql): ronda de aliados y nombres en el celular.
 
 Se pueden correr más de una vez sin problema.
 
@@ -24,27 +25,29 @@ Se pueden correr más de una vez sin problema.
 
 1. **Registro.** El host escribe cuántas personas hay (**mínimo 3**). El sistema calcula los infiltrados (de 3 a 9 → 1, 10–15 → 2, 16–20 → 3, 21 o más → 4) y sugiere el resto del reparto. El host puede ajustarlo con +/−; el botón de confirmar solo se activa cuando el total coincide.
 2. **Reparto.** Al confirmar se baraja y se reparten los roles, una sola vez, antes de la primera plática. Quien llega después de completar el número recibe un rol que ya existe, nunca phishing.
-3. **Celular.** Cada quien escanea el QR y ve una cinemática corta ("Bienvenido a Clip… Gracias por elegirnos") con el botón **Iniciar**, luego **Cómo se juega** (5 tarjetitas) y escribe su nombre. Recibe su carta boca abajo y la voltea: número público ("Jugador 7"), personaje, grupo, descripción y 5 rasgos. El botón **?** vuelve a abrir las instrucciones.
+3. **Celular.** Cada quien escanea el QR y ve una cinemática corta ("Bienvenido a Clip… Gracias por elegirnos") con el botón **Iniciar**, luego **Cómo se juega** (primero "¿De qué va?" y después 7 tarjetitas) y escribe su nombre. Recibe su carta boca abajo y la voltea: número público ("Jugador 7"), personaje, grupo, descripción y 5 rasgos. Con **"Listo, guardar mi carta"** (o solo, en cuanto el host empieza) la carta se guarda en un ícono 🃏 arriba; al tocarlo vuelve a aparecer. El botón **?** vuelve a abrir las instrucciones.
+   - La pantalla principal del celular es **"Ahora"**: la sección actual con sus tips **"Pon atención a…"** según tu personaje, y debajo lo que el host tenga abierto.
+   - **Cada vez que el host cambia de sección**, el celular muestra un aviso con los tips de esa sección: qué escuchar para reconocer tus rasgos y para tu pregunta rescate.
    - Los phishing reciben rasgos señuelo: dos parecidos a los de los grupos y tres que contradicen al grupo que imitan.
    - Si alguien cierra la pantalla, vuelve a escanear, escribe el mismo nombre y confirma "Sí, recuperar mi personaje".
 4. **Secciones.** El host avanza la agenda: ¿Quiénes somos? → Firma de contrato → Promesa Clip → Comida → Configuración de equipos → Talent Performance → Charla de Ciberseguridad. La pantalla proyectada solo muestra la sección actual. Al terminar cada sección puede abrir la **ronda de preguntas**.
 5. **Pregunta rescate.** En las secciones que tienen rescate (Negocio, Cultura, Seguridad y TP), cada jugador puede pedir una vez su pregunta y responderla para conservar su puntaje.
    - La respuesta aparece en el host, en la pestaña Rescates, junto a la respuesta esperada y su diapositiva. El host la marca ✓ o ✗.
    - Firma de contrato, Comida y Configuración de equipos no tienen rescate.
-6. **Votación.** Se puede abrir desde la sección 2, es decir, después de la primera plática. Cada quien vota una vez por ronda. En la pestaña Votos, el host ve quién votó por quién, con nombres reales, y la cuenta de votos.
+6. **Votación.** Se puede abrir desde la sección 2, es decir, después de la primera plática. Cada quien vota una vez por ronda, eligiendo por **nombre**. En la pestaña Votos, el host ve quién votó por quién, con nombres reales, y la cuenta de votos.
 7. **Auditor.** Al cerrar la votación, el host nombra auditor al más votado (si hay empate, decide el host). El auditor no sale: sigue jugando y recibe su propia pregunta rescate. Todos ven si era phishing o no.
-8. **Venta.** Con la venta abierta, los vendedores (de Clip o de Mi Clip) buscan a un merchant para convencerlo. El merchant marca en su celular los criterios que se cumplieron y decide si quedó convencido. Los criterios se ven en el host, en la pestaña Venta.
+8. **Ronda de aliados: "¿Quién crees que es de tu equipo?".** El host la abre y la cierra. Cada quien marca hasta 5 nombres y puede cambiar mientras esté abierta. Al cerrarla, cada celular ve "Acertaste X de Y". Son equipo los del Grupo Comercio entre ellos, los del Grupo Venta entre ellos y los phishing entre ellos; la persona normal no tiene equipo. En el host, la pestaña **Aliados** muestra a quién eligió cada quien con ✓/✗. No mueve la vida.
 9. **Barras de vida.** Empiezan en 100 y se ven en el ranking de la pantalla proyectada y en cada celular:
    - −10 por cada voto recibido como sospechoso.
    - +15 por rescate correcto (sin pasar de 100), −5 por rescate incorrecto.
 
    El host puede apagarlas; apagadas, la vida no cambia.
-10. **Cierre.** "Cerrar sesión y borrar datos" elimina nombres, roles, votos, rescates y ventas. No hay exportación.
+10. **Cierre.** "Cerrar sesión y borrar datos" elimina nombres, roles, votos, rescates y aliados. No hay exportación.
 
 ## Datos personales
 
 - Solo se pide el nombre que escribe cada jugador. Sirve para anclar su personaje y que pueda volver a entrar.
-- Los demás celulares solo ven números ("Jugador 7"). El voto guarda identificadores internos, no nombres.
+- Los celulares ven el nombre y número de los demás para votar y elegir aliados, pero nunca sus roles. El voto guarda identificadores internos, no nombres.
 - La pantalla proyectada muestra el nombre y la vida de cada quien (así lo pidió la usuaria), pero nunca roles, votos ni respuestas. Eso solo está en el control del host, y solo mientras la sesión está abierta. La base de datos no deja leer las tablas desde el navegador: todo pasa por funciones que piden la llave del host o el token del jugador.
 - Al cerrar la sesión se borra todo.
 
@@ -57,7 +60,7 @@ Todo el contenido está en [`app/src/codigo/content.ts`](../app/src/codigo/conte
   - `TP p.N`: presentación de Talent Performance, Goal Setting y CRL Continuo.
 - Ningún dato está validado como oficial. Cada uno tiene una etiqueta:
   - **Propuesta · validar:** el dato sale de la presentación, pero falta que alguien lo confirme.
-  - **Diseño del juego:** texto que redacté para el juego; no está en la presentación. Por ejemplo, las pistas señuelo, las 2 pistas extra de "persona normal", las preguntas de auditor y los criterios de venta.
+  - **Diseño del juego:** texto que redacté para el juego; no está en la presentación. Por ejemplo, las pistas señuelo, las 2 pistas extra de "persona normal", las preguntas de auditor y los tips "Pon atención a…".
   - **Pendiente de fuente:** la presentación no lo responde.
 
 El host ve todo esto en la pestaña **Banco de respuestas**.

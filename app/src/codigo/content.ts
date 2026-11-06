@@ -358,18 +358,94 @@ export const RESCUE_SECTIONS = SECTIONS.flatMap((s, i) => (s.rescate ? [i] : [])
 /** La votación se abre después de la primera plática. */
 export const FIRST_TALK = 0;
 
-/** Sub-juego de venta: lo que el merchant marca. Todos son de diseño. */
-export const SALE_CRITERIA: { id: string; texto: string; ref: string }[] = [
-  { id: 'dato', texto: 'Me dio un dato real del producto (y supo de qué diapositiva sale)', ref: 'Diseño' },
-  { id: 'beneficio', texto: 'Me explicó el beneficio para mi negocio o para mí', ref: 'Diseño; OB p.9' },
-  { id: 'seguridad', texto: 'Respondió mi duda de seguridad sin pedirme datos', ref: 'Diseño; OB p.72, p.74' },
-  { id: 'escucha', texto: 'Me preguntó qué necesito antes de ofrecerme algo', ref: 'Diseño' },
-];
-
-export const SELLER_ROLES: RoleId[] = ['vendedor_clip', 'vendedor_miclip'];
-export const MERCHANT_ROLES: RoleId[] = ['merchant_fan', 'merchant_desconfiado', 'merchant_confuso'];
 
 /** Barras de vida: empiezan en 100. Nunca se gana por eliminar a otros. */
 export const LIFE = { start: 100, perVote: -10, rescueRight: 15, rescueWrong: -5 } as const;
 
 export const MIN_PLAYERS = 3;
+
+/**
+ * Ronda de aliados: "¿quién es de tu equipo?". Comercio y Venta son equipos;
+ * los phishing son equipo entre ellos; la persona normal no tiene equipo.
+ * La migración 004 repite esta regla en SQL.
+ */
+export function allyTeam(role: RoleId): string | null {
+  if (role === 'phishing') return 'phishing';
+  return ROLES[role].grupo;
+}
+
+type Listen = { seccion: string; escucha: string };
+
+/**
+ * Tips por sección (diseño, por validar): en qué sección se habla de cada rasgo
+ * y qué escuchar para reconocerlo o defenderlo en la ronda de preguntas.
+ */
+export const LISTEN: Record<string, Listen> = {
+  'com-1': { seccion: 'quienes', escucha: 'cómo y cuándo reciben su dinero los comercios (la presentación no lo dice: pregúntalo)' },
+  'com-2': { seccion: 'ciber', escucha: 'qué certificaciones de seguridad tiene Clip' },
+  'ven-1': { seccion: 'quienes', escucha: 'las 3 ideas con las que nació Clip y lo que gana el usuario de Mi Clip' },
+  'ven-2': { seccion: 'tp', escucha: 'qué es un KPI dentro de las #MetasGanadoras' },
+  'phi-com': { seccion: 'quienes', escucha: 'cómo hablan los comercios de su dinero, para sonar como uno de ellos' },
+  'phi-ven': { seccion: 'quienes', escucha: 'qué beneficios presume Clip, para sonar como vendedor' },
+  'phi-c1': { seccion: 'quienes', escucha: 'qué dice la presentación del dinero de las ventas: tu rasgo podría delatarte' },
+  'phi-c2': { seccion: 'ciber', escucha: 'qué NO se hace con el NIP y los correos raros: tu rasgo dice lo contrario, defiéndelo sin que te descubran' },
+  'phi-c3': { seccion: 'ciber', escucha: 'qué dice PCI DSS de guardar datos de tarjeta: tu rasgo lo rompe' },
+  'phi-v1': { seccion: 'ciber', escucha: 'por qué nunca se comparten accesos: tu rasgo lo hace' },
+  'phi-v2': { seccion: 'quienes', escucha: 'cuánto cashback da de verdad Mi Clip: tu rasgo exagera' },
+  'phi-v3': { seccion: 'ciber', escucha: 'qué hacer si un proceso te pide datos de tarjeta: tu rasgo lo hace mal' },
+  'fan-1': { seccion: 'quienes', escucha: 'cuándo salió la Clip Plus y qué la hacía especial' },
+  'fan-2': { seccion: 'promesa', escucha: 'qué es la certificación "Hecho en México" y quién la dio' },
+  'fan-3': { seccion: 'promesa', escucha: 'los 6 valores de Clip (We devote, We learn…)' },
+  'des-1': { seccion: 'ciber', escucha: 'quién regula y certifica a Clip (Banxico, CNBV, PCI, EMVCo)' },
+  'des-2': { seccion: 'ciber', escucha: 'qué es el SPEI y cómo se conecta Clip' },
+  'des-3': { seccion: 'ciber', escucha: 'a dónde se reporta algo raro' },
+  'con-1': { seccion: 'quienes', escucha: 'la diferencia entre la Clip Plus y la Clip Pro' },
+  'con-2': { seccion: 'quienes', escucha: 'los objetivos 2026 de Clip (ahí aparece el TPV)' },
+  'con-3': { seccion: 'tp', escucha: 'qué es un KPI y cómo se usa en una meta' },
+  'vcl-1': { seccion: 'quienes', escucha: 'cuántos comercios activos tiene Clip' },
+  'vcl-2': { seccion: 'quienes', escucha: 'qué empresa adquirió Clip en 2025 y para quién es' },
+  'vcl-3': { seccion: 'quienes', escucha: 'qué terminal imprime tickets y cuándo salió' },
+  'vmc-1': { seccion: 'quienes', escucha: 'cómo se paga sin contacto con Mi Clip' },
+  'vmc-2': { seccion: 'quienes', escucha: 'cuántas instalaciones tuvo Mi Clip en su primer mes' },
+  'vmc-3': { seccion: 'quienes', escucha: 'qué son las mini-apps de Mi Clip' },
+  'fmc-1': { seccion: 'quienes', escucha: 'cuándo y con quién llegó Mi Clip a las personas' },
+  'fmc-2': { seccion: 'quienes', escucha: 'qué se puede hacer desde el widget inteligente' },
+  'fmc-3': { seccion: 'quienes', escucha: 'qué es 24/7 Customer Happiness' },
+  'pn-1': { seccion: 'quienes', escucha: 'cómo "Haz rendir más tu dinero" (cashback)' },
+  'pn-2': { seccion: 'quienes', escucha: 'cómo se cobra hoy sin tarjeta física (el celular como terminal)' },
+  'pn-3': { seccion: 'quienes', escucha: 'qué es la bóveda de Mi Clip' },
+  'pn-4': { seccion: 'quienes', escucha: 'qué es Mi Clip y para quién es' },
+  'pn-5': { seccion: 'quienes', escucha: 'con quién se alió Clip para lanzar Mi Clip' },
+};
+
+/** Qué escuchar para la pregunta rescate de cada sección. */
+export const RESCUE_LISTEN: Record<string, string> = {
+  quienes: 'qué empresa adquirió Clip en 2020 y para qué',
+  promesa: 'el Perfil Clipper: "Ego off, …"',
+  tp: 'cuántas metas pide #MetasGanadoras y cuánto pesa cada una',
+  ciber: 'qué es PCI DSS y cuántos requisitos tiene',
+};
+
+const GENERAL_TIP: Record<string, string> = {
+  firma: 'Aprovecha la pausa: platica y busca quién comparte tus rasgos.',
+  comida: 'En la comida, platica con quien no conoces y escucha si repite alguno de tus rasgos.',
+  equipos: 'Fíjate en quién queda contigo en el equipo: ¿comparte algún rasgo?',
+};
+
+export type Tip = { kind: 'rasgo' | 'rescate' | 'general'; texto: string; rasgo?: string };
+
+/** Los tips "Pon atención a…" de un personaje en una sección. */
+export function tipsFor(role: RoleId, decoy: Group | null, sectionIndex: number): Tip[] {
+  const sec = SECTIONS[sectionIndex];
+  if (!sec) return [];
+  const tips: Tip[] = pistasFor(role, decoy)
+    .filter((p) => LISTEN[p.id]?.seccion === sec.id)
+    .map((p) => ({ kind: 'rasgo' as const, texto: LISTEN[p.id].escucha, rasgo: p.texto }));
+  if (RESCUE_LISTEN[sec.id]) tips.push({ kind: 'rescate', texto: RESCUE_LISTEN[sec.id] });
+  if (tips.length === 0) tips.push({ kind: 'general', texto: GENERAL_TIP[sec.id] ?? 'Escucha con atención y busca tus rasgos en otras personas.' });
+  return tips;
+}
+
+/** "¿De qué va?": lo primero que lee cada quien en su celular. */
+export const ABOUT =
+  'Código Clip es un juego para conocer Clip mientras escuchas la presentación de bienvenida: el negocio, la cultura, Talent Performance y la seguridad. Cada quien recibe un personaje con rasgos. Tu misión: encontrar a tu equipo escuchando lo que dicen los demás, y descubrir a los phishing antes de que roben datos. Lo que aprendas en cada sección te sirve para reconocer rasgos y para responder tu pregunta rescate.';

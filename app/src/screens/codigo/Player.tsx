@@ -1,7 +1,8 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
-import { GROUP_LABEL, MERCHANT_ROLES, ROLES, SALE_CRITERIA, SECTIONS, SELLER_ROLES, pistasFor } from '../../codigo/content';
+import { ABOUT, GROUP_LABEL, ROLES, SECTIONS, allyTeam, pistasFor, tipsFor } from '../../codigo/content';
+import { MAX_ALLIES } from '../../codigo/state';
 import { ccStore, useCCSession, usePlayerView } from '../../codigo/hooks';
 import { cc } from '../../codigo/transport';
 import type { PlayerView } from '../../codigo/types';
@@ -161,7 +162,13 @@ function JoinForm({ code, onToken }: { code: string; onToken: (t: string) => voi
   );
 }
 
-const INTRO_LINES = ['Bienvenido a Clip', 'Gracias por elegirnos', 'Hoy vas a recibir una carta secreta…', '…y a descubrir quién es quién.'];
+const INTRO_LINES = [
+  'Bienvenido a Clip',
+  'Gracias por elegirnos',
+  'Mientras escuchas la bienvenida vas a jugar Código Clip.',
+  'Recibirás una carta secreta…',
+  '…y tendrás que descubrir quién es quién.',
+];
 
 /** The short text cinematic the phone shows after scanning. */
 function Intro({ onStart }: { onStart: () => void }) {
@@ -207,6 +214,8 @@ const HOWTO: { emoji: string; title: string; text: string }[] = [
   { emoji: '🔎', title: 'Tus rasgos', text: 'Tu carta trae 5 rasgos. Platica y búscalos en otras personas: si alguien comparte uno de tus rasgos, es tu aliado.' },
   { emoji: '🎣', title: 'Phishing', text: 'Hay infiltrados que fingen ser de un grupo. Sus rasgos casi cuadran… pero algo no encaja.' },
   { emoji: '🗳️', title: 'Votación', text: 'Cuando se abra, vota una vez por quien creas que es phishing. A quien votan le baja la vida y pasa a auditor, sin salir del juego.' },
+  { emoji: '🤝', title: 'Tu equipo', text: 'En la ronda de aliados eliges quién crees que es de tu equipo. Al cerrarla te decimos cuántos acertaste.' },
+  { emoji: '💡', title: 'Pon atención', text: 'Cada vez que cambia la sección te avisamos qué escuchar de la presentación según tu personaje. Te sirve para reconocer rasgos y para tu pregunta rescate.' },
   { emoji: '🛟', title: 'Rescate y vida', text: 'Tu barra de vida empieza en 100. Responde bien la pregunta rescate de cada sección para recuperar vida.' },
 ];
 
@@ -217,7 +226,11 @@ function HowTo({ onDone, overlay = false }: { onDone: () => void; overlay?: bool
       <h1 id="cc-howto" className="text-3xl">
         Cómo se <span className="text-brand">juega</span>
       </h1>
-      <ol className="mt-5 flex flex-col gap-3">
+      <section className="hud mt-5 rounded-[var(--radius-card)] p-5" aria-label="¿De qué va?">
+        <p className="text-xs font-bold tracking-[0.16em] uppercase opacity-90">¿De qué va?</p>
+        <p className="mt-2 leading-relaxed">{ABOUT}</p>
+      </section>
+      <ol className="mt-4 flex flex-col gap-3">
         {HOWTO.map((h, i) => (
           <motion.li
             key={h.title}
@@ -250,7 +263,7 @@ function HowTo({ onDone, overlay = false }: { onDone: () => void; overlay?: bool
 }
 
 /** The character as a board-game card; it starts face down the first time. */
-function RoleCard({ code, view }: { code: string; view: PlayerView }) {
+function RoleCard({ code, view, onSave }: { code: string; view: PlayerView; onSave?: () => void }) {
   const { me } = view;
   const def = ROLES[me.role];
   const pistas = pistasFor(me.role, me.decoy);
@@ -325,6 +338,11 @@ function RoleCard({ code, view }: { code: string; view: PlayerView }) {
                   ? 'Usa tus rasgos para parecer del grupo. Que nadie te descubra.'
                   : 'Busca estos rasgos en otras personas: quien comparta uno es tu aliado.'}
               </p>
+              {onSave && flipped && (
+                <Button className="mt-4 w-full" onClick={onSave}>
+                  Listo, guardar mi carta 🃏
+                </Button>
+              )}
             </div>
           </div>
         </section>
@@ -333,24 +351,80 @@ function RoleCard({ code, view }: { code: string; view: PlayerView }) {
   );
 }
 
+function TipList({ view }: { view: PlayerView }) {
+  const tips = tipsFor(view.me.role, view.me.decoy, view.session.section);
+  return (
+    <ul className="mt-3 flex flex-col gap-2">
+      {tips.map((t) => (
+        <li key={t.texto} className="rounded-2xl bg-accent-soft p-3 text-sm text-ink">
+          {t.kind === 'rasgo' && (
+            <>
+              💡 <strong>Pon atención a</strong> {t.texto}.
+            </>
+          )}
+          {t.kind === 'rescate' && (
+            <>
+              🛟 <strong>Para tu pregunta rescate, escucha</strong> {t.texto}.
+            </>
+          )}
+          {t.kind === 'general' && <>💬 {t.texto}</>}
+          {t.rasgo && <span className="mt-1 block text-xs text-ink-dim">Tu rasgo: “{t.rasgo}”</span>}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function Game({ code, token, view }: { code: string; token: string; view: PlayerView }) {
   const { me, session } = view;
   const section = SECTIONS[session.section];
   const auditors = view.roster.filter((r) => r.auditor);
   const [help, setHelp] = useState(false);
+  const [saved, setSaved] = useState(() => !!ccStore.get(`saved:${code}`));
+  const [cardOpen, setCardOpen] = useState(false);
+  const save = (markSeen = true) => {
+    ccStore.set(`saved:${code}`, '1');
+    if (markSeen) ccStore.set(`seen:${code}`, String(session.section));
+    setSaved(true);
+    setCardOpen(false);
+  };
+  // Once the host gets going, the card folds into the icon on its own.
+  const started = session.section > 0 || session.roundOpen || session.voteOpen || session.saleOpen;
+  useEffect(() => {
+    if (started && !saved && ccStore.get(`flipped:${code}`)) save(false);
+  }, [started]);
+  // A new section: show what to listen for.
+  const seen = Number(ccStore.get(`seen:${code}`) ?? '0');
+  const [toast, setToast] = useState<number | null>(null);
+  useEffect(() => {
+    if (saved && session.section !== seen) setToast(session.section);
+  }, [saved, session.section, seen]);
+  const closeToast = () => {
+    ccStore.set(`seen:${code}`, String(session.section));
+    setToast(null);
+  };
 
   return (
     <Shell>
       <header className="hud -mx-4 -mt-6 px-5 py-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <div>
             <p className="text-xs font-bold tracking-[0.14em] uppercase opacity-90">Eres el</p>
             <p data-testid="cc-me-num" className="text-3xl font-extrabold">
               Jugador {me.num}
             </p>
           </div>
-          <div className="flex items-center gap-3 text-right text-sm">
-            <p className="font-semibold">{section.titulo}</p>
+          <div className="flex items-center gap-2">
+            {saved && (
+              <button
+                type="button"
+                onClick={() => setCardOpen(true)}
+                aria-label="Ver mi carta"
+                className="grid h-12 w-10 place-items-center rounded-lg border-2 border-white/80 bg-white/20 text-xl font-extrabold shadow-md"
+              >
+                🃏
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setHelp(true)}
@@ -374,7 +448,20 @@ function Game({ code, token, view }: { code: string; token: string; view: Player
         </p>
       )}
 
-      <RoleCard code={code} view={view} />
+      {!saved ? (
+        <RoleCard code={code} view={view} onSave={() => save()} />
+      ) : (
+        <section className="card p-5" aria-labelledby="cc-now">
+          <p className="eyebrow">Ahora · sección {session.section + 1} de {SECTIONS.length}</p>
+          <h1 id="cc-now" data-testid="cc-now" className="mt-1 text-2xl">
+            {section.titulo}
+          </h1>
+          <TipList view={view} />
+          {!session.roundOpen && !session.voteOpen && !session.saleOpen && (
+            <p className="mt-3 text-xs text-ink-dim">Escucha la presentación. Aquí aparecerá lo que abra el presentador.</p>
+          )}
+        </section>
+      )}
 
       {session.roundOpen && (
         <p className="rounded-2xl bg-accent-soft p-4 font-semibold text-accent-deep">
@@ -382,8 +469,8 @@ function Game({ code, token, view }: { code: string; token: string; view: Player
         </p>
       )}
       {session.voteOpen && <VotePanel code={code} token={token} view={view} />}
-      <RescuePanel code={code} token={token} view={view} />
-      {session.saleOpen && <SalePanel code={code} token={token} view={view} />}
+      {saved && <RescuePanel code={code} token={token} view={view} />}
+      {(session.saleOpen || view.allyScore) && <AlliesPanel code={code} token={token} view={view} />}
 
       {auditors.length > 0 && (
         <section className="card p-5">
@@ -392,11 +479,36 @@ function Game({ code, token, view }: { code: string; token: string; view: Player
           <ul className="mt-2 flex flex-col gap-1 text-sm">
             {auditors.map((a) => (
               <li key={a.num}>
-                Jugador {a.num}: {a.wasPhishing ? <strong className="text-[var(--cc-threat)]">era phishing 🎣</strong> : 'no era phishing'}
+                {a.name}: {a.wasPhishing ? <strong className="text-[var(--cc-threat)]">era phishing 🎣</strong> : 'no era phishing'}
               </li>
             ))}
           </ul>
         </section>
+      )}
+
+      {cardOpen && (
+        <div role="dialog" aria-modal="true" aria-label="Mi carta" className="fixed inset-0 z-50 overflow-y-auto bg-inverse/70 px-4 py-6 backdrop-blur-sm">
+          <div className="mx-auto max-w-md">
+            <RoleCard code={code} view={view} />
+            <Button className="mt-4 w-full" tone="ghost" onClick={() => setCardOpen(false)}>
+              Cerrar mi carta
+            </Button>
+          </div>
+        </div>
+      )}
+      {toast !== null && !cardOpen && !help && (
+        <div role="dialog" aria-modal="true" aria-labelledby="cc-toast" className="fixed inset-0 z-50 grid place-items-center bg-inverse/60 px-4 backdrop-blur-sm">
+          <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} className="card w-full max-w-md p-6">
+            <p className="eyebrow">Nueva sección</p>
+            <h2 id="cc-toast" className="mt-1 text-2xl">
+              {SECTIONS[toast].titulo}
+            </h2>
+            <TipList view={view} />
+            <Button className="mt-5 w-full" onClick={closeToast}>
+              Entendido
+            </Button>
+          </motion.div>
+        </div>
       )}
       <AnimatePresence>{help && <HowTo overlay onDone={() => setHelp(false)} />}</AnimatePresence>
     </Shell>
@@ -433,21 +545,24 @@ function VotePanel({ code, token, view }: { code: string; token: string; view: P
         🗳️ ¿Quién crees que es phishing?
       </h2>
       {view.votedFor !== null ? (
-        <p className="mt-2 font-semibold text-ink">Votaste por el Jugador {view.votedFor}. Un voto por ronda.</p>
+        <p className="mt-2 font-semibold text-ink">
+          Votaste por {view.roster.find((r) => r.num === view.votedFor)?.name ?? `el Jugador ${view.votedFor}`}. Un voto por ronda.
+        </p>
       ) : (
         <>
           <p className="mt-1 text-sm">Para qué sirve: señalar a quien crees que es phishing. Un voto por ronda y no se cambia; a quien votan le baja la vida.</p>
-          <ul className="mt-3 grid grid-cols-4 gap-2">
+          <ul className="mt-3 grid grid-cols-2 gap-2">
             {others.map((r) => (
               <li key={r.num}>
                 <button
                   type="button"
                   disabled={busy}
                   onClick={() => void act(() => cc.vote(code, token, r.num))}
-                  aria-label={`Votar por el Jugador ${r.num}`}
-                  className="h-14 w-full rounded-2xl border-2 border-edge bg-panel text-xl font-extrabold text-ink hover:border-accent"
+                  aria-label={`Votar por ${r.name}`}
+                  className="min-h-14 w-full rounded-2xl border-2 border-edge bg-panel px-3 py-2 text-left font-bold text-ink hover:border-accent"
                 >
-                  {r.num}
+                  <span className="block truncate">{r.name}</span>
+                  <span className="block text-xs font-medium text-ink-dim">Jugador {r.num}</span>
                 </button>
               </li>
             ))}
@@ -507,72 +622,59 @@ function RescuePanel({ code, token, view }: { code: string; token: string; view:
   );
 }
 
-function SalePanel({ code, token, view }: { code: string; token: string; view: PlayerView }) {
+function AlliesPanel({ code, token, view }: { code: string; token: string; view: PlayerView }) {
   const { act, busy, err } = useAction();
-  const [seller, setSeller] = useState<number | null>(null);
-  const [criteria, setCriteria] = useState<string[]>([]);
-  const role = view.me.role;
-
-  if (SELLER_ROLES.includes(role))
-    return (
-      <section className="card p-5">
-        <h2 className="text-lg">🤝 Venta abierta</h2>
-        <p className="mt-1">Para qué sirve: practicar cómo explicar el valor de Clip. Busca a un merchant y convéncelo; él decide en su celular.</p>
-      </section>
-    );
-  if (!MERCHANT_ROLES.includes(role))
-    return (
-      <section className="card p-5">
-        <h2 className="text-lg">🤝 Venta abierta</h2>
-        <p className="mt-1">Observa: los vendedores intentan convencer a los merchants.</p>
-      </section>
-    );
-
-  const options = view.roster.filter((r) => r.num !== view.me.num && !view.judged.includes(r.num));
-  const toggle = (id: string) => setCriteria((c) => (c.includes(id) ? c.filter((x) => x !== id) : [...c, id]));
-  const decide = (convinced: boolean) =>
-    seller !== null &&
-    void act(async () => {
-      await cc.sale(code, token, seller, criteria, convinced);
-      setSeller(null);
-      setCriteria([]);
-    });
+  const [picked, setPicked] = useState<number[]>(view.myAllies);
+  const team = allyTeam(view.me.role);
+  const others = view.roster.filter((r) => r.num !== view.me.num);
+  const open = view.session.saleOpen;
+  const toggle = (n: number) =>
+    setPicked((p) => (p.includes(n) ? p.filter((x) => x !== n) : p.length >= MAX_ALLIES ? p : [...p, n]));
+  const sent = view.myAllies.length > 0 && view.myAllies.length === picked.length && picked.every((n) => view.myAllies.includes(n));
 
   return (
-    <section className="card p-5" aria-labelledby="cc-sale">
-      <h2 id="cc-sale" className="text-lg">
-        🤝 ¿Te convencieron?
+    <section className="card p-5" aria-labelledby="cc-allies">
+      <h2 id="cc-allies" className="text-lg">
+        🤝 ¿Quién crees que es de tu equipo?
       </h2>
-      <p className="mt-1 text-sm">Para qué sirve: decidir si el vendedor te convenció. Marca lo que sí hizo.</p>
-      {view.judged.length > 0 && <p className="mt-1 text-sm">Ya calificaste a: {view.judged.map((n) => `Jugador ${n}`).join(', ')}.</p>}
-      <label htmlFor="cc-seller" className="mt-3 block font-semibold text-ink">
-        ¿Quién te vendió?
-      </label>
-      <select id="cc-seller" value={seller ?? ''} onChange={(e) => setSeller(e.target.value ? Number(e.target.value) : null)} className={input}>
-        <option value="">Elige un número</option>
-        {options.map((r) => (
-          <option key={r.num} value={r.num}>
-            Jugador {r.num}
-          </option>
-        ))}
-      </select>
-      <fieldset className="mt-3 flex flex-col gap-2">
-        <legend className="font-semibold text-ink">Marca lo que sí hizo</legend>
-        {SALE_CRITERIA.map((c) => (
-          <label key={c.id} className="panel flex items-start gap-3 rounded-2xl p-3 text-sm">
-            <input type="checkbox" checked={criteria.includes(c.id)} onChange={() => toggle(c.id)} className="mt-0.5 h-5 w-5 accent-[var(--cc-primary)]" />
-            {c.texto}
-          </label>
-        ))}
-      </fieldset>
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <Button disabled={busy || seller === null} onClick={() => decide(true)} className="!px-3">
-          Me convenció
-        </Button>
-        <Button tone="ghost" disabled={busy || seller === null} onClick={() => decide(false)} className="!px-3">
-          No me convenció
-        </Button>
-      </div>
+      {view.allyScore && !open ? (
+        <p data-testid="cc-ally-score" className="mt-2 text-lg font-bold text-ink">
+          {view.allyScore.total === 0
+            ? 'No elegiste a nadie.'
+            : team === null
+              ? `No tenías equipo: elegiste a ${view.allyScore.total}.`
+              : `Acertaste ${view.allyScore.right} de ${view.allyScore.total}. ${view.allyScore.right === view.allyScore.total ? '¡Bien!' : ''}`}
+        </p>
+      ) : (
+        <>
+          <p className="mt-1 text-sm">
+            {view.me.role === 'phishing'
+              ? 'Elige a quien creas que también es infiltrado.'
+              : team === null
+                ? 'No tienes equipo: elige a quien creas que comparte rasgos con otros… y observa quién podría ser phishing.'
+                : 'Para qué sirve: comprobar a quién reconociste por sus rasgos. Marca hasta 5 personas; puedes cambiar hasta que el presentador cierre la ronda.'}
+          </p>
+          <ul className="mt-3 flex flex-col gap-2">
+            {others.map((r) => (
+              <li key={r.num}>
+                <label className="panel flex items-center gap-3 rounded-2xl p-3">
+                  <input
+                    type="checkbox"
+                    checked={picked.includes(r.num)}
+                    onChange={() => toggle(r.num)}
+                    className="h-5 w-5 accent-[var(--cc-primary)]"
+                  />
+                  <span className="font-semibold text-ink">{r.name}</span>
+                  <span className="ml-auto text-xs text-ink-dim">Jugador {r.num}</span>
+                </label>
+              </li>
+            ))}
+          </ul>
+          <Button className="mt-3 w-full" disabled={busy || picked.length === 0 || sent} onClick={() => void act(() => cc.allies(code, token, picked))}>
+            {sent ? 'Equipo enviado ✓' : 'Enviar mi equipo'}
+          </Button>
+        </>
+      )}
       {err}
     </section>
   );

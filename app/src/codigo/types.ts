@@ -65,7 +65,8 @@ export type Rescue = {
   at: number;
 };
 
-export type Sale = { id: string; merchantId: string; sellerId: string; criteria: string[]; convinced: boolean; at: number };
+/** "¿Quién es de tu equipo?": the people a player picked as allies. */
+export type AllyGuess = { playerId: string; targetIds: string[]; at: number };
 
 export type CCState = {
   session: CCSession;
@@ -75,19 +76,21 @@ export type CCState = {
   players: CCPlayer[];
   votes: Vote[];
   rescues: Rescue[];
-  sales: Sale[];
+  allies: AllyGuess[];
 };
 
 /** What a phone gets back: its own player and only public facts about the rest. */
 export type PlayerView = {
   session: CCSession;
   me: CCPlayer;
-  roster: { num: number; auditor: boolean; wasPhishing: boolean | null }[];
+  roster: { num: number; name: string; auditor: boolean; wasPhishing: boolean | null }[];
   /** The number this player voted for in the current round, if any. */
   votedFor: number | null;
   rescues: { section: number; auditor: boolean; status: RescueStatus }[];
-  /** As a merchant: the sellers this player already judged. */
-  judged: number[];
+  /** Numbers this player picked as allies. */
+  myAllies: number[];
+  /** Once the ally round is closed: how many picks were right. */
+  allyScore: { right: number; total: number } | null;
 };
 
 /** What the host gets back: everything, names included. */
@@ -96,7 +99,7 @@ export type HostView = {
   players: CCPlayer[];
   votes: Vote[];
   rescues: Rescue[];
-  sales: Sale[];
+  allies: AllyGuess[];
 };
 
 /** The public board for the projected screen: names and life, no roles, no votes. */

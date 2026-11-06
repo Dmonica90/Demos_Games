@@ -22,7 +22,8 @@ export interface CCTransport {
   me(code: string, token: string): Promise<PlayerView | null>;
   vote(code: string, token: string, targetNum: number): Promise<void>;
   rescue(code: string, token: string, answer: string): Promise<void>;
-  sale(code: string, token: string, sellerNum: number, criteria: string[], convinced: boolean): Promise<void>;
+  /** "¿Quién es de tu equipo?": the numbers this player picks. */
+  allies(code: string, token: string, nums: number[]): Promise<void>;
 
   /** Calls back whenever anything in the session changed. */
   watch(code: string, onChange: (session: CCSession) => void): () => void;

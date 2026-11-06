@@ -24,12 +24,19 @@ async function phone(context: BrowserContext, url: string, name: string, shot?: 
   await expect(page.getByTestId('cc-me-num')).toBeVisible();
   await page.getByText('Toca para voltear tu carta').click();
   await expect(page.locator('#cc-role')).toBeVisible();
+  const rasgos = page.locator('#cc-role').locator('xpath=..').getByRole('listitem');
+  await expect(rasgos).toHaveCount(5);
+  await expect(rasgos.first()).not.toContainText('?');
+  if (shot) await page.screenshot({ path: `${shot}-carta.png`, fullPage: true });
+  await page.getByRole('button', { name: /Listo, guardar mi carta/ }).click();
+  await expect(page.getByTestId('cc-now')).toHaveText('¿Quiénes somos?');
+  await expect(page.getByText(/Pon atención a/).first()).toBeVisible();
   return page;
 }
 
 const roleOf = async (p: Page) => (await p.locator('#cc-role').textContent())!;
 
-test('menú → Código Clip: registro, perfiles, re-entrada, rescate, votación, venta y cierre', async ({ context }) => {
+test('menú → Código Clip: registro, perfiles, re-entrada, rescate, votación, aliados y cierre', async ({ context }) => {
   test.setTimeout(180_000);
   const host = await context.newPage();
   await host.setViewportSize({ width: 1440, height: 1000 });
@@ -65,9 +72,13 @@ test('menú → Código Clip: registro, perfiles, re-entrada, rescate, votación
   const phones: Page[] = [];
   for (const [i, n] of names.entries()) phones.push(await phone(context, url, n, i === 0 && SHOTS ? `${SHOTS}/cc-2` : undefined));
   await expect(host.getByText('6 de 6 registrados')).toBeVisible();
-  for (const p of phones) await expect(p.locator('#cc-role').locator('xpath=..').getByRole('listitem')).toHaveCount(5);
-  for (const p of phones) await expect(p.locator('#cc-role').locator('xpath=..').getByRole('listitem').first()).not.toContainText('?');
-  if (SHOTS) await phones[0].screenshot({ path: `${SHOTS}/cc-2-carta.png`, fullPage: true });
+  if (SHOTS) await phones[0].screenshot({ path: `${SHOTS}/cc-2-ahora.png`, fullPage: true });
+
+  // The card folds into an icon; tapping it brings the card back.
+  await phones[1].getByRole('button', { name: 'Ver mi carta' }).click();
+  await expect(phones[1].locator('#cc-role')).toBeVisible();
+  await phones[1].getByRole('button', { name: 'Cerrar mi carta' }).click();
+  await expect(phones[1].locator('#cc-role')).toHaveCount(0);
 
   // The "?" button brings the instructions back.
   await phones[0].getByRole('button', { name: 'Cómo se juega' }).click();
@@ -84,7 +95,9 @@ test('menú → Código Clip: registro, perfiles, re-entrada, rescate, votación
   await expect(phones[0].getByText('Beto')).toHaveCount(0);
 
   // Re-entrada: Ana borra su sesión, vuelve a escanear y recupera su personaje con su nombre.
+  await phones[0].getByRole('button', { name: 'Ver mi carta' }).click();
   const anaRole = await roleOf(phones[0]);
+  await phones[0].getByRole('button', { name: 'Cerrar mi carta' }).click();
   await phones[0].evaluate(() => sessionStorage.clear());
   await phones[0].reload();
   await intro(phones[0]);
@@ -95,6 +108,7 @@ test('menú → Código Clip: registro, perfiles, re-entrada, rescate, votación
   await expect(phones[0].getByTestId('cc-me-num')).toHaveText('Jugador 1');
   await phones[0].getByText('Toca para voltear tu carta').click();
   expect(await roleOf(phones[0])).toBe(anaRole);
+  await phones[0].getByRole('button', { name: /Listo, guardar mi carta/ }).click();
 
   // Rescate en "¿Quiénes somos?".
   const beto = phones[1];
@@ -112,12 +126,19 @@ test('menú → Código Clip: registro, perfiles, re-entrada, rescate, votación
   await expect(host.getByRole('button', { name: 'Abrir votación' })).toBeDisabled();
   await host.getByRole('button', { name: '2. Firma de contrato' }).click();
   await expect(host.getByTestId('cc-section')).toHaveText('Firma de contrato');
+  // Each phone gets the new section with its tips.
+  for (const [i, p] of phones.entries()) {
+    await expect(p.getByRole('heading', { name: 'Firma de contrato' }).first()).toBeVisible();
+    await expect(p.getByText('Nueva sección')).toBeVisible();
+    if (i === 0 && SHOTS) await p.screenshot({ path: `${SHOTS}/cc-5-aviso.png` });
+    await p.getByRole('button', { name: 'Entendido' }).click();
+  }
   await expect(beto.getByText('Pregunta rescate')).toHaveCount(0); // sin rescate
   await host.getByRole('button', { name: 'Abrir votación' }).click();
   for (const [i, p] of phones.entries()) {
-    const target = i === 0 ? 2 : 1; // todos contra el Jugador 1, Ana contra el 2
-    await p.getByRole('button', { name: `Votar por el Jugador ${target}`, exact: true }).click();
-    await expect(p.getByText(`Votaste por el Jugador ${target}`)).toBeVisible();
+    const target = i === 0 ? 'Beto' : 'Ana'; // todos contra Ana, Ana contra Beto
+    await p.getByRole('button', { name: `Votar por ${target}`, exact: true }).click();
+    await expect(p.getByText(`Votaste por ${target}`)).toBeVisible();
   }
   await host.getByRole('button', { name: /^Votos/ }).click();
   await expect(host.getByTestId('cc-votes')).toContainText('Jugador 2 · Beto → Jugador 1 · Ana');
@@ -130,23 +151,22 @@ test('menú → Código Clip: registro, perfiles, re-entrada, rescate, votación
   await host.getByRole('button', { name: 'Cerrar votación' }).click();
   await host.getByRole('button', { name: 'Nombrar auditor' }).first().click();
   await expect(phones[0].getByText('ahora eres auditor')).toBeVisible();
-  await expect(phones[3].getByText(/Jugador 1: (era phishing|no era phishing)/)).toBeVisible();
+  await expect(phones[3].getByText(/Ana: (era phishing|no era phishing)/)).toBeVisible();
   if (SHOTS) await host.screenshot({ path: `${SHOTS}/cc-3-votos.png`, fullPage: true });
 
-  // Venta: el primer merchant califica a alguien.
-  await host.getByRole('button', { name: 'Abrir venta' }).click();
-  for (const p of phones) await expect(p.getByRole('heading', { name: /Venta abierta|¿Te convencieron\?/ })).toBeVisible();
-  let merchant: Page | null = null;
-  for (const p of phones) if (await p.getByText('¿Te convencieron?').count()) merchant = p;
-  expect(merchant).not.toBeNull();
-  const myNum = Number((await merchant!.getByTestId('cc-me-num').textContent())!.replace(/\D/g, ''));
-  const other = myNum === 2 ? 3 : 2;
-  await merchant!.getByLabel('¿Quién te vendió?').selectOption(String(other));
-  await merchant!.getByLabel(/Me dio un dato real/).check();
-  await merchant!.getByRole('button', { name: 'Me convenció', exact: true }).click();
-  await expect(merchant!.getByText(`Ya calificaste a: Jugador ${other}`)).toBeVisible();
-  await host.getByRole('button', { name: /^Venta$/ }).click();
-  await expect(host.getByTestId('cc-sales')).toContainText('quedó convencido');
+  // Ronda de aliados: Beto elige a Caro y Dani; al cerrar ve cuántos acertó.
+  await host.getByRole('button', { name: 'Abrir ronda de aliados' }).click();
+  await expect(beto.getByRole('heading', { name: /¿Quién crees que es de tu equipo\?/ })).toBeVisible();
+  await expect(screen.getByText(/Ronda de aliados/)).toBeVisible();
+  await beto.getByRole('checkbox', { name: /Caro/ }).check();
+  await beto.getByRole('checkbox', { name: /Dani/ }).check();
+  await beto.getByRole('button', { name: 'Enviar mi equipo' }).click();
+  await expect(beto.getByRole('button', { name: 'Equipo enviado ✓' })).toBeVisible();
+  if (SHOTS) await beto.screenshot({ path: `${SHOTS}/cc-6-aliados.png`, fullPage: true });
+  await host.getByRole('button', { name: /^Aliados$/ }).click();
+  await expect(host.getByTestId('cc-allies')).toContainText('Beto');
+  await host.getByRole('button', { name: 'Cerrar ronda de aliados' }).click();
+  await expect(beto.getByTestId('cc-ally-score')).toBeVisible();
 
   // Cierre: se borra todo.
   await host.getByRole('button', { name: 'Cerrar sesión y borrar datos' }).click();

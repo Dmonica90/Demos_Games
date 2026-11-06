@@ -5,10 +5,11 @@
 3. **Clip Plus.** p.14 dice 2017 y la línea de tiempo de p.16 lo dibuja cerca de 2018. ¿Cuál es el año correcto?
 4. **TPV y "pago sin tarjeta".** ¿Qué definición de TPV quieres usar? ¿"Pagar sin tarjeta" se refiere a los pagos sin tarjeta presente (2020) o al celular como terminal (2026)?
 5. **Rasgos.** Convertí las pistas en rasgos del personaje (por ejemplo "Mi primera terminal fue la Clip Plus, con teclado para el NIP"). La redacción es mía; ¿la validas?
-6. **Contenido de diseño.** Redacté las pistas señuelo del phishing, 2 pistas extra para "persona normal" (que necesitaba 5), las preguntas rescate de auditor y los 4 criterios de venta. ¿Los validas o prefieres escribirlos tú?
+6. **Contenido de diseño.** Redacté las pistas señuelo del phishing, 2 pistas extra para "persona normal" (que necesitaba 5), las preguntas rescate de auditor y los tips "Pon atención a…" de cada sección. ¿Los validas o prefieres escribirlos tú?
 7. **Reparto.** Las proporciones sugeridas reparten vendedor, merchant y fan en ese orden. ¿Te sirve, o quieres un mínimo por grupo (por ejemplo, al menos 2 por grupo de aliados)?
 8. **Configuración de equipos.** Hoy no tiene pregunta rescate. ¿Quieres una (por ejemplo, sobre los equipos y productos de OB p.45–46)?
 9. **Revelar al auditor.** ¿Todos deben ver si el votado era phishing, o solo el host?
 10. **Agenda Argentina.** ¿Necesitas también el orden de Argentina (OB p.3)?
 11. **Fin del juego.** ¿Quieres una pantalla final de cierre con lo aprendido (un resumen por tema con sus diapositivas) antes de borrar los datos?
 12. **Borrado automático.** Si el host olvida cerrar, ¿borramos las sesiones solas después de 24 h?
+13. **Ronda de aliados.** ¿Acertar a tu equipo debería dar vida (por ejemplo +5 por acierto)? Hoy no la mueve.

@@ -72,8 +72,7 @@ export function supabaseCC(url: string, anonKey: string): CCTransport {
     me: (code, token) => call<PlayerView | null>('cc_me', { p_code: code, p_token: token }),
     vote: (code, token, num) => call('cc_vote', { p_code: code, p_token: token, p_target: num }),
     rescue: (code, token, answer) => call('cc_rescue', { p_code: code, p_token: token, p_answer: answer }),
-    sale: (code, token, num, criteria, convinced) =>
-      call('cc_sale', { p_code: code, p_token: token, p_seller: num, p_criteria: criteria, p_convinced: convinced }),
+    allies: (code, token, nums) => call('cc_allies', { p_code: code, p_token: token, p_nums: nums }),
     watch(code, onChange) {
       const channel = db
         .channel(`cc:${code}:${(channels += 1)}`)

@@ -1,9 +1,30 @@
 import { describe, expect, it } from 'vitest';
-import { MIN_PLAYERS, RESCUE_SECTIONS, ROLES, SECTIONS, pistasFor } from './content';
+import { DECOY_INDIVIDUAL, DECOY_SHARED, LISTEN, MIN_PLAYERS, RESCUE_SECTIONS, ROLES, SECTIONS, SHARED, pistasFor, tipsFor } from './content';
 import type { RoleId } from './types';
 import { readFileSync } from 'node:fs';
+import { MAX_ALLIES } from './state';
 
 describe('Código Clip: contenido', () => {
+  it('cada rasgo sabe en qué sección escucharlo', () => {
+    const all = [...SHARED.comercio, ...SHARED.venta, ...DECOY_SHARED, ...DECOY_INDIVIDUAL.comercio, ...DECOY_INDIVIDUAL.venta, ...Object.values(ROLES).flatMap((r) => r.individuales)];
+    const ids = new Set(SECTIONS.map((x) => x.id));
+    for (const p of all) {
+      expect(LISTEN[p.id], p.id).toBeTruthy();
+      expect(ids.has(LISTEN[p.id].seccion), p.id).toBe(true);
+    }
+  });
+
+  it('cada personaje tiene tips en cada sección; las de rescate incluyen el tema del rescate', () => {
+    for (const role of Object.keys(ROLES) as RoleId[])
+      SECTIONS.forEach((sec, i) => {
+        const tips = tipsFor(role, role === 'phishing' ? 'comercio' : null, i);
+        expect(tips.length, `${role} ${sec.id}`).toBeGreaterThan(0);
+        if (sec.rescate) expect(tips.some((t) => t.kind === 'rescate')).toBe(true);
+      });
+    expect(tipsFor('merchant_fan', null, 0).some((t) => t.texto.includes('Clip Plus'))).toBe(true);
+    expect(tipsFor('merchant_fan', null, 1)[0].texto).toMatch(/platica/);
+  });
+
   it('TP va antes que Ciberseguridad', () => {
     expect(SECTIONS.map((x) => x.id)).toEqual(['quienes', 'firma', 'promesa', 'comida', 'equipos', 'tp', 'ciber']);
   });
@@ -45,5 +66,6 @@ describe('Código Clip: contenido', () => {
     expect(read('002_codigo_clip.sql')).toContain(`v_section > ${SECTIONS.length - 1}`);
     expect(read('003_codigo_clip_v2.sql')).toContain(`array[${RESCUE_SECTIONS.join(', ')}]`);
     expect(read('003_codigo_clip_v2.sql')).toContain(`< ${MIN_PLAYERS} then`);
+    expect(read('004_codigo_clip_v3.sql')).toContain(`> ${MAX_ALLIES} then`);
   });
 });
