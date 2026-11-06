@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { GROUP_LABEL, MERCHANT_ROLES, ROLES, SALE_CRITERIA, SECTIONS, SELLER_ROLES, pistasFor } from '../../codigo/content';
 import { ccStore, useCCSession, usePlayerView } from '../../codigo/hooks';
 import { cc } from '../../codigo/transport';
 import type { PlayerView } from '../../codigo/types';
-import { Brand } from '../../components/game';
+import { Brand, ScoreBar } from '../../components/game';
+import { lifeColor } from './shared';
 import { Button } from '../../components/ui';
 import { normalizeCode } from '../../realtime/types';
 import { go } from '../../router';
@@ -57,6 +59,11 @@ function EnterCode() {
 
 function PlayerIn({ code }: { code: string }) {
   const [token, setToken] = useState(() => ccStore.get(`token:${code}`));
+  const [step, setStep] = useState<'intro' | 'howto' | 'ready'>(() => (ccStore.get(`intro:${code}`) ? 'ready' : 'intro'));
+  const finishIntro = () => {
+    ccStore.set(`intro:${code}`, '1');
+    setStep('ready');
+  };
   const { data: session } = useCCSession(code);
   const { data: view } = usePlayerView(code, token);
 
@@ -70,6 +77,8 @@ function PlayerIn({ code }: { code: string }) {
       </Note>
     );
   if (session.status === 'registro') return <Note>El presentador está repartiendo los roles. Espera un momento…</Note>;
+  if (!token && step === 'intro') return <Intro onStart={() => setStep('howto')} />;
+  if (!token && step === 'howto') return <HowTo onDone={finishIntro} />;
   if (!token || view === null)
     return (
       <JoinForm
@@ -152,26 +161,211 @@ function JoinForm({ code, onToken }: { code: string; onToken: (t: string) => voi
   );
 }
 
-function Game({ code, token, view }: { code: string; token: string; view: PlayerView }) {
-  const { me, session } = view;
+const INTRO_LINES = ['Bienvenido a Clip', 'Gracias por elegirnos', 'Hoy vas a recibir una carta secreta…', '…y a descubrir quién es quién.'];
+
+/** The short text cinematic the phone shows after scanning. */
+function Intro({ onStart }: { onStart: () => void }) {
+  const [shown, setShown] = useState(1);
+  useEffect(() => {
+    if (shown >= INTRO_LINES.length) return;
+    const id = setTimeout(() => setShown((n) => n + 1), 1100);
+    return () => clearTimeout(id);
+  }, [shown]);
+  return (
+    <main className="hud flex min-h-dvh flex-col justify-center px-6 py-10">
+      <div className="mx-auto w-full max-w-md">
+        <p className="text-xs font-bold tracking-[0.2em] uppercase opacity-80">Código Clip</p>
+        <ul className="mt-6 flex flex-col gap-4" aria-live="polite">
+          {INTRO_LINES.slice(0, shown).map((line, i) => (
+            <motion.li
+              key={line}
+              initial={{ opacity: 0, y: 16, filter: 'blur(6px)' }}
+              animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+              transition={{ duration: 0.7, ease: 'easeOut' }}
+              className={i < 2 ? 'text-4xl leading-tight font-extrabold' : 'text-xl font-medium opacity-95'}
+            >
+              {line}
+            </motion.li>
+          ))}
+        </ul>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: shown >= 2 ? 1 : 0 }} transition={{ duration: 0.5 }} className="mt-12">
+          <button
+            type="button"
+            onClick={onStart}
+            className="min-h-14 w-full rounded-full bg-white text-lg font-extrabold text-accent-deep shadow-lg active:scale-[0.97]"
+          >
+            Iniciar ▶
+          </button>
+        </motion.div>
+      </div>
+    </main>
+  );
+}
+
+const HOWTO: { emoji: string; title: string; text: string }[] = [
+  { emoji: '🃏', title: 'Tu carta', text: 'Recibes un personaje secreto. No le enseñes tu carta a nadie.' },
+  { emoji: '🔎', title: 'Tus rasgos', text: 'Tu carta trae 5 rasgos. Platica y búscalos en otras personas: si alguien comparte uno de tus rasgos, es tu aliado.' },
+  { emoji: '🎣', title: 'Phishing', text: 'Hay infiltrados que fingen ser de un grupo. Sus rasgos casi cuadran… pero algo no encaja.' },
+  { emoji: '🗳️', title: 'Votación', text: 'Cuando se abra, vota una vez por quien creas que es phishing. A quien votan le baja la vida y pasa a auditor, sin salir del juego.' },
+  { emoji: '🛟', title: 'Rescate y vida', text: 'Tu barra de vida empieza en 100. Responde bien la pregunta rescate de cada sección para recuperar vida.' },
+];
+
+/** "Cómo se juega": after the intro, and again from the ? button. */
+function HowTo({ onDone, overlay = false }: { onDone: () => void; overlay?: boolean }) {
+  const body = (
+    <div className="mx-auto w-full max-w-md">
+      <h1 id="cc-howto" className="text-3xl">
+        Cómo se <span className="text-brand">juega</span>
+      </h1>
+      <ol className="mt-5 flex flex-col gap-3">
+        {HOWTO.map((h, i) => (
+          <motion.li
+            key={h.title}
+            initial={{ opacity: 0, x: -12 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.08 * i }}
+            className="panel flex gap-3 rounded-2xl p-4"
+          >
+            <span aria-hidden="true" className="text-3xl">
+              {h.emoji}
+            </span>
+            <span>
+              <strong className="block text-ink">{h.title}</strong>
+              <span className="text-sm">{h.text}</span>
+            </span>
+          </motion.li>
+        ))}
+      </ol>
+      <Button className="mt-6 w-full" onClick={onDone} sfx="confirm">
+        Entendido
+      </Button>
+    </div>
+  );
+  if (!overlay) return <main className="screen-in flex min-h-dvh flex-col justify-center px-4 py-8">{body}</main>;
+  return (
+    <div role="dialog" aria-modal="true" aria-labelledby="cc-howto" className="fixed inset-0 z-50 overflow-y-auto bg-ground px-4 py-8">
+      {body}
+    </div>
+  );
+}
+
+/** The character as a board-game card; it starts face down the first time. */
+function RoleCard({ code, view }: { code: string; view: PlayerView }) {
+  const { me } = view;
   const def = ROLES[me.role];
   const pistas = pistasFor(me.role, me.decoy);
+  const [flipped, setFlipped] = useState(() => !!ccStore.get(`flipped:${code}`));
+  const flip = () => {
+    setFlipped(true);
+    ccStore.set(`flipped:${code}`, '1');
+  };
+  const group =
+    me.role === 'phishing'
+      ? `Finge ser del ${GROUP_LABEL[me.decoy ?? 'comercio']}`
+      : def.grupo
+        ? GROUP_LABEL[def.grupo]
+        : 'Sin grupo';
+
+  return (
+    <div className="[perspective:1400px]">
+      <motion.div
+        className="relative [transform-style:preserve-3d]"
+        initial={false}
+        animate={{ rotateY: flipped ? 180 : 0 }}
+        transition={{ duration: 0.8, ease: [0.2, 0.8, 0.2, 1] }}
+      >
+        {/* Back of the card */}
+        <button
+          type="button"
+          onClick={flip}
+          aria-hidden={flipped}
+          tabIndex={flipped ? -1 : 0}
+          className={`${flipped ? 'pointer-events-none absolute inset-0' : 'relative'} block w-full [backface-visibility:hidden]`}
+        >
+          <div className="rounded-[1.75rem] bg-brand p-2.5 shadow-brand">
+            <div className="hud flex min-h-[26rem] flex-col items-center justify-center rounded-[1.35rem] border-4 border-white/60 p-6 text-center">
+              <span aria-hidden="true" className="text-7xl">🃏</span>
+              <p className="mt-4 text-3xl font-extrabold">Código Clip</p>
+              <p className="mt-2 text-lg opacity-95">Toca para voltear tu carta</p>
+            </div>
+          </div>
+        </button>
+        {/* Face of the card */}
+        <section
+          aria-labelledby="cc-role"
+          aria-hidden={!flipped}
+          className={`${flipped ? 'relative' : 'pointer-events-none absolute inset-0'} [backface-visibility:hidden] [transform:rotateY(180deg)]`}
+        >
+          <div className="rounded-[1.75rem] bg-brand p-2.5 shadow-brand">
+            <div className="relative rounded-[1.35rem] border-4 border-white/70 bg-panel p-5">
+              <span className="absolute top-3 left-4 text-lg font-extrabold text-accent-deep">{me.num}</span>
+              <span className="absolute top-3 right-4 text-lg font-extrabold text-accent-deep">{me.num}</span>
+              <div className="mx-auto mt-3 grid h-28 w-28 place-items-center rounded-full bg-accent-soft text-6xl shadow-brand-soft" aria-hidden="true">
+                {def.emoji}
+              </div>
+              <p className="eyebrow mt-3 text-center">Tu personaje · secreto</p>
+              <h1 id="cc-role" className="mt-1 text-center text-2xl">
+                {def.nombre}
+              </h1>
+              <p className="mt-1 text-center">
+                <span className="rounded-full bg-inverse px-3 py-1 text-xs font-bold text-white">{group}</span>
+              </p>
+              <p className="mt-3 text-center text-sm">{def.descripcion}</p>
+              <h2 className="mt-5 text-center text-base">Tus 5 rasgos</h2>
+              <ol className="mt-2 flex flex-col gap-2">
+                {pistas.map((p, i) => (
+                  <li key={p.id} className="flex gap-2 rounded-2xl border border-accent-line bg-accent-soft/60 p-3 text-sm text-ink">
+                    <strong className="text-accent-deep">{i + 1}.</strong>
+                    <span>{p.texto}</span>
+                  </li>
+                ))}
+              </ol>
+              <p className="mt-3 text-center text-xs text-ink-dim">
+                {me.role === 'phishing'
+                  ? 'Usa tus rasgos para parecer del grupo. Que nadie te descubra.'
+                  : 'Busca estos rasgos en otras personas: quien comparta uno es tu aliado.'}
+              </p>
+            </div>
+          </div>
+        </section>
+      </motion.div>
+    </div>
+  );
+}
+
+function Game({ code, token, view }: { code: string; token: string; view: PlayerView }) {
+  const { me, session } = view;
   const section = SECTIONS[session.section];
   const auditors = view.roster.filter((r) => r.auditor);
+  const [help, setHelp] = useState(false);
 
   return (
     <Shell>
-      <header className="hud -mx-4 -mt-6 flex items-center justify-between px-5 py-4">
-        <div>
-          <p className="text-xs font-bold tracking-[0.14em] uppercase opacity-90">Eres el</p>
-          <p data-testid="cc-me-num" className="text-3xl font-extrabold">
-            Jugador {me.num}
-          </p>
+      <header className="hud -mx-4 -mt-6 px-5 py-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-bold tracking-[0.14em] uppercase opacity-90">Eres el</p>
+            <p data-testid="cc-me-num" className="text-3xl font-extrabold">
+              Jugador {me.num}
+            </p>
+          </div>
+          <div className="flex items-center gap-3 text-right text-sm">
+            <p className="font-semibold">{section.titulo}</p>
+            <button
+              type="button"
+              onClick={() => setHelp(true)}
+              aria-label="Cómo se juega"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-lg font-extrabold text-accent-deep"
+            >
+              ?
+            </button>
+          </div>
         </div>
-        <div className="text-right text-sm">
-          <p className="font-semibold">{section.titulo}</p>
-          {session.pointsOn && <p data-testid="cc-points">{me.points} pts</p>}
-        </div>
+        {session.pointsOn && (
+          <div className="mt-3" data-testid="cc-life" data-life={me.life}>
+            <ScoreBar points={me.life} color={lifeColor(me.life)} size="sm" onBrand label="Tu vida" />
+          </div>
+        )}
       </header>
 
       {me.auditor && (
@@ -180,33 +374,11 @@ function Game({ code, token, view }: { code: string; token: string; view: Player
         </p>
       )}
 
-      <section className="card p-5" aria-labelledby="cc-role">
-        <p className="eyebrow">Tu personaje · secreto</p>
-        <h1 id="cc-role" className="mt-1 text-2xl">
-          {def.emoji} {def.nombre}
-        </h1>
-        <p className="mt-2">{def.descripcion}</p>
-        <p className="mt-2 text-sm font-semibold text-ink">
-          {me.role === 'phishing'
-            ? `Finge ser del ${GROUP_LABEL[me.decoy ?? 'comercio']}. Que nadie te descubra.`
-            : def.grupo
-              ? `Tus aliados son del ${GROUP_LABEL[def.grupo]}: compartirán alguna de tus pistas.`
-              : 'No tienes grupo: ayuda a descubrir a los phishing.'}
-        </p>
-        <h2 className="mt-5 text-lg">Tus 5 pistas</h2>
-        <ol className="mt-2 flex flex-col gap-2">
-          {pistas.map((p, i) => (
-            <li key={p.id} className="panel rounded-2xl p-3 text-ink">
-              <strong className="text-accent-deep">{i + 1}.</strong> {p.texto}
-            </li>
-          ))}
-        </ol>
-        <p className="mt-3 text-xs text-ink-dim">Pregúntalas a los demás o al facilitador. Si alguien comparte tu pista, es tu aliado.</p>
-      </section>
+      <RoleCard code={code} view={view} />
 
       {session.roundOpen && (
         <p className="rounded-2xl bg-accent-soft p-4 font-semibold text-accent-deep">
-          💬 Ronda de preguntas abierta: busca a quien comparta tus pistas.
+          💬 Ronda de preguntas: platica y busca a quien comparta tus rasgos.
         </p>
       )}
       {session.voteOpen && <VotePanel code={code} token={token} view={view} />}
@@ -216,6 +388,7 @@ function Game({ code, token, view }: { code: string; token: string; view: Player
       {auditors.length > 0 && (
         <section className="card p-5">
           <h2 className="text-lg">Auditores</h2>
+          <p className="mt-1 text-xs">Quienes ya fueron votados. Siguen jugando.</p>
           <ul className="mt-2 flex flex-col gap-1 text-sm">
             {auditors.map((a) => (
               <li key={a.num}>
@@ -225,6 +398,7 @@ function Game({ code, token, view }: { code: string; token: string; view: Player
           </ul>
         </section>
       )}
+      <AnimatePresence>{help && <HowTo overlay onDone={() => setHelp(false)} />}</AnimatePresence>
     </Shell>
   );
 }
@@ -262,7 +436,7 @@ function VotePanel({ code, token, view }: { code: string; token: string; view: P
         <p className="mt-2 font-semibold text-ink">Votaste por el Jugador {view.votedFor}. Un voto por ronda.</p>
       ) : (
         <>
-          <p className="mt-1 text-sm">Un solo voto. No se puede cambiar.</p>
+          <p className="mt-1 text-sm">Para qué sirve: señalar a quien crees que es phishing. Un voto por ronda y no se cambia; a quien votan le baja la vida.</p>
           <ul className="mt-3 grid grid-cols-4 gap-2">
             {others.map((r) => (
               <li key={r.num}>
@@ -305,7 +479,7 @@ function RescuePanel({ code, token, view }: { code: string; token: string; view:
         </p>
       ) : !open ? (
         <>
-          <p className="mt-1 text-sm">Una por sección. Respóndela para no perder tu puntaje.</p>
+          <p className="mt-1 text-sm">Para qué sirve: recuperar vida. Una por sección; si aciertas, +15 de vida.</p>
           <Button tone="ghost" className="mt-3 w-full" onClick={() => setOpen(true)}>
             Pedir pregunta rescate
           </Button>
@@ -343,7 +517,7 @@ function SalePanel({ code, token, view }: { code: string; token: string; view: P
     return (
       <section className="card p-5">
         <h2 className="text-lg">🤝 Venta abierta</h2>
-        <p className="mt-1">Busca a un merchant y convéncelo. Él decide en su celular, con los criterios que se ven en pantalla.</p>
+        <p className="mt-1">Para qué sirve: practicar cómo explicar el valor de Clip. Busca a un merchant y convéncelo; él decide en su celular.</p>
       </section>
     );
   if (!MERCHANT_ROLES.includes(role))
@@ -369,6 +543,7 @@ function SalePanel({ code, token, view }: { code: string; token: string; view: P
       <h2 id="cc-sale" className="text-lg">
         🤝 ¿Te convencieron?
       </h2>
+      <p className="mt-1 text-sm">Para qué sirve: decidir si el vendedor te convenció. Marca lo que sí hizo.</p>
       {view.judged.length > 0 && <p className="mt-1 text-sm">Ya calificaste a: {view.judged.map((n) => `Jugador ${n}`).join(', ')}.</p>}
       <label htmlFor="cc-seller" className="mt-3 block font-semibold text-ink">
         ¿Quién te vendió?

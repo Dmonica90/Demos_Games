@@ -39,6 +39,7 @@ export const emptyCounts = (): Counts => ({
 
 /** The suggested split for n people; the host can adjust it before confirming. */
 export function distribuir(n: number): Counts {
+  // Minimum table is 3 (see MIN_PLAYERS); below that the host cannot confirm.
   const counts = emptyCounts();
   counts.phishing = Math.min(n, infiltrados(n));
   for (let i = 0; i < n - counts.phishing; i += 1) counts[DEAL_ORDER[i % DEAL_ORDER.length]] += 1;

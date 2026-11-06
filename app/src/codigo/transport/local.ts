@@ -75,6 +75,10 @@ export function localCC(): CCTransport {
     async getSession(code) {
       return read(code)?.session ?? null;
     },
+    async board(code) {
+      const st = read(code);
+      return st ? S.boardView(st) : null;
+    },
     join: (code, name, claim) =>
       mutate(code, (st) => {
         const { state, result } = S.join(st, name, claim, id(), Date.now());

@@ -1,4 +1,3 @@
-import QRCode from 'qrcode';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { DECOY_INDIVIDUAL, DECOY_SHARED, GROUP_LABEL, ROLES, SALE_CRITERIA, SECTIONS, SHARED } from '../../codigo/content';
@@ -9,7 +8,7 @@ import { cc } from '../../codigo/transport';
 import type { CCPlayer, HostView, SessionPatch } from '../../codigo/types';
 import { Brand } from '../../components/game';
 import { Button, Dialog } from '../../components/ui';
-import { ccJoinUrl, go } from '../../router';
+import { ccJoinUrl, ccScreenUrl, go } from '../../router';
 
 type Tab = 'jugadores' | 'votos' | 'rescates' | 'venta' | 'banco';
 const TABS: { id: Tab; label: string }[] = [
@@ -85,7 +84,7 @@ export function HostControl({ code }: { code: string }) {
         <JoinCard code={code} count={view.players.length} total={s.total} />
         <section className="card p-5">
           <label className="flex items-center justify-between gap-3 font-bold text-ink">
-            Puntos por participar
+            Barras de vida
             <input
               type="checkbox"
               role="switch"
@@ -94,7 +93,7 @@ export function HostControl({ code }: { code: string }) {
               className="h-6 w-11 accent-[var(--cc-primary)]"
             />
           </label>
-          <p className="mt-2 text-xs">+1 por votar, +1 por pedir rescate, +2 si es correcto, +1 por jugar la venta. Nunca por ganar.</p>
+          <p className="mt-2 text-xs">Empiezan en 100. −10 por cada voto recibido, +15 por rescate correcto, −5 si es incorrecto.</p>
         </section>
         <Button tone="danger" onClick={() => setClosing(true)}>
           Cerrar sesión y borrar datos
@@ -204,29 +203,24 @@ function Toggle({ on, onClick, label, disabled }: { on: boolean; onClick: () => 
 }
 
 function JoinCard({ code, count, total }: { code: string; count: number; total: number }) {
-  const url = ccJoinUrl(code);
-  const [svg, setSvg] = useState('');
-  useEffect(() => {
-    void QRCode.toString(url, { type: 'svg', margin: 1, errorCorrectionLevel: 'M', color: { dark: '#1c2230', light: '#ffffff' } }).then(setSvg);
-  }, [url]);
   return (
-    <section className="card flex flex-col items-center p-5 text-center">
-      <Brand label="Código Clip · Inducción" />
-      <p className="mt-1 font-bold text-ink">Escanea para recibir tu personaje</p>
-      <div
-        className="mt-3 w-full max-w-[15rem] [&>svg]:h-auto [&>svg]:w-full"
-        role="img"
-        aria-label={`Código QR para entrar a la sesión ${code}`}
-        dangerouslySetInnerHTML={{ __html: svg }}
-      />
-      <p data-testid="cc-join-link" className="mt-3 rounded-full bg-panel-2 px-3 py-1 font-mono text-xs break-all text-ink">
-        {url.replace(/^https?:\/\//, '')}
-      </p>
-      <p data-testid="cc-code" className="text-brand mt-2 text-4xl font-extrabold tracking-[0.18em]">
+    <section className="card p-5">
+      <Brand label="Código Clip · control del host" />
+      <p data-testid="cc-code" className="text-brand mt-1 text-4xl font-extrabold tracking-[0.18em]">
         {code}
       </p>
       <p className="mt-1 text-sm" aria-live="polite">
         <strong className="text-ink">{count}</strong> de {total} registrados
+      </p>
+      <Button className="mt-4 w-full" onClick={() => window.open(ccScreenUrl(code), `codigo-${code}`)}>
+        📺 Abrir pantalla para proyectar
+      </Button>
+      <p className="mt-2 text-xs">
+        Comparte en Meet o proyecta <strong>solo esa ventana</strong>: muestra el QR, la sección actual y el ranking. Esta
+        pantalla de control (roles, votos y respuestas) es solo para ti.
+      </p>
+      <p data-testid="cc-join-link" className="mt-3 rounded-xl bg-panel-2 px-3 py-1.5 font-mono text-[0.7rem] break-all text-ink-dim">
+        {ccJoinUrl(code).replace(/^https?:\/\//, '')}
       </p>
     </section>
   );
@@ -244,7 +238,7 @@ function Players({ view }: { view: HostView }) {
             <th className="p-2">Personaje</th>
             <th className="p-2">Grupo</th>
             <th className="p-2">Estado</th>
-            {view.session.pointsOn && <th className="p-2 text-right">Puntos</th>}
+            <th className="p-2 text-right">Vida</th>
           </tr>
         </thead>
         <tbody>
@@ -261,7 +255,7 @@ function Players({ view }: { view: HostView }) {
                   {p.role === 'phishing' ? `Imita a ${GROUP_LABEL[p.decoy ?? 'comercio']}` : def.grupo ? GROUP_LABEL[def.grupo] : 'Sin grupo'}
                 </td>
                 <td className="p-2">{p.auditor ? <span className="font-bold text-[var(--cc-ally)]">Auditor</span> : 'En juego'}</td>
-                {view.session.pointsOn && <td className="p-2 text-right font-bold text-ink">{p.points}</td>}
+                <td className="p-2 text-right font-bold text-ink">{p.life}</td>
               </tr>
             );
           })}
