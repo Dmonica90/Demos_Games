@@ -91,8 +91,7 @@ export function localCC(): CCTransport {
     vote: (code, token, num) => mutate(code, (st) => ({ state: S.vote(st, token, num), out: undefined })),
     rescue: (code, token, answer) =>
       mutate(code, (st) => ({ state: S.rescue(st, token, answer, id(), Date.now()), out: undefined })),
-    sale: (code, token, num, criteria, convinced) =>
-      mutate(code, (st) => ({ state: S.sale(st, token, num, criteria, convinced, id(), Date.now()), out: undefined })),
+    allies: (code, token, nums) => mutate(code, (st) => ({ state: S.allies(st, token, nums, Date.now()), out: undefined })),
     watch(code, onChange) {
       const fn = (s: CCSession) => s.code === code && onChange(s);
       listeners.add(fn);

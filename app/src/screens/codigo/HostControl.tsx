@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { DECOY_INDIVIDUAL, DECOY_SHARED, GROUP_LABEL, ROLES, SALE_CRITERIA, SECTIONS, SHARED } from '../../codigo/content';
+import { DECOY_INDIVIDUAL, DECOY_SHARED, GROUP_LABEL, LISTEN, ROLES, SECTIONS, SHARED } from '../../codigo/content';
+import { sameTeam } from '../../codigo/state';
 import type { Estado, Pista } from '../../codigo/content';
 import { ccStore, useHostView } from '../../codigo/hooks';
 import { tally } from '../../codigo/roles';
@@ -15,7 +16,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'jugadores', label: 'Jugadores' },
   { id: 'votos', label: 'Votos' },
   { id: 'rescates', label: 'Rescates' },
-  { id: 'venta', label: 'Venta' },
+  { id: 'venta', label: 'Aliados' },
   { id: 'banco', label: 'Banco de respuestas' },
 ];
 
@@ -130,7 +131,7 @@ export function HostControl({ code }: { code: string }) {
               onClick={() => void set({ voteOpen: !s.voteOpen })}
               label="Votación"
             />
-            <Toggle on={s.saleOpen} onClick={() => void set({ saleOpen: !s.saleOpen })} label="Venta" />
+            <Toggle on={s.saleOpen} onClick={() => void set({ saleOpen: !s.saleOpen })} label="Ronda de aliados" />
           </div>
           <p className="mt-2 text-sm">
             {section.rescate
@@ -164,7 +165,7 @@ export function HostControl({ code }: { code: string }) {
         {tab === 'jugadores' && <Players view={view} />}
         {tab === 'votos' && <Votes view={view} onAuditor={(id, on) => void run(() => cc.setAuditor(code, key, id, on))} />}
         {tab === 'rescates' && <Rescues view={view} onMark={(id, ok) => void run(() => cc.markRescue(code, key, id, ok))} />}
-        {tab === 'venta' && <Sales view={view} />}
+        {tab === 'venta' && <Allies view={view} />}
         {tab === 'banco' && <Bank />}
       </div>
 
@@ -391,49 +392,35 @@ function Rescues({ view, onMark }: { view: HostView; onMark: (id: string, ok: bo
   );
 }
 
-function Sales({ view }: { view: HostView }) {
+function Allies({ view }: { view: HostView }) {
   const byId = new Map(view.players.map((p) => [p.id, p]));
+  if (view.allies.length === 0)
+    return <Empty>{view.session.saleOpen ? 'Esperando a que elijan a su equipo…' : 'Abre la ronda de aliados: cada quien elige quién cree que es de su equipo.'}</Empty>;
   return (
-    <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
-      <div className="card p-5">
-        <h2 className="text-xl">Criterios del merchant</h2>
-        <p className="mt-1 text-sm">El vendedor de Clip o de Mi Clip intenta convencer a un merchant. El merchant decide en su celular con estos criterios.</p>
-        <ol className="mt-4 flex flex-col gap-2">
-          {SALE_CRITERIA.map((c, i) => (
-            <li key={c.id} className="panel rounded-2xl p-3 text-ink">
-              <strong>{i + 1}.</strong> {c.texto} <span className="text-xs text-ink-dim">({c.ref})</span>
+    <section className="card p-5">
+      <h2 className="text-xl">¿Quién es de tu equipo?</h2>
+      <p className="mt-1 text-sm">
+        ✓ es del mismo equipo (Comercio, Venta, o phishing con phishing). La persona normal no tiene equipo. Al cerrar la ronda, cada celular ve cuántos acertó.
+      </p>
+      <ul data-testid="cc-allies" className="mt-3 flex flex-col gap-2">
+        {view.allies.map((g) => {
+          const me = byId.get(g.playerId);
+          if (!me) return null;
+          const picks = g.targetIds.flatMap((id) => (byId.get(id) ? [byId.get(id)!] : []));
+          const right = picks.filter((p) => sameTeam(me, p)).length;
+          return (
+            <li key={g.playerId} className="panel rounded-2xl p-3 text-sm">
+              <p>
+                <strong className="text-ink">{label(me)}</strong> <span className="text-ink-dim">({ROLES[me.role].nombre})</span> · acertó{' '}
+                <strong>{right}</strong> de {picks.length}
+              </p>
+              <p className="mt-1">
+                {picks.map((p) => `${sameTeam(me, p) ? '✓' : '✗'} ${p.name}`).join('   ')}
+              </p>
             </li>
-          ))}
-        </ol>
-        <p className="mt-3">
-          <EstadoBadge estado="diseño" />
-        </p>
-      </div>
-      <div className="card p-5">
-        <h2 className="text-xl">Decisiones</h2>
-        {view.sales.length === 0 ? (
-          <p className="mt-2 text-sm text-ink-dim">{view.session.saleOpen ? 'Esperando a los merchants…' : 'Abre la venta para empezar.'}</p>
-        ) : (
-          <ul data-testid="cc-sales" className="mt-3 flex flex-col gap-2">
-            {view.sales.map((x) => {
-              const seller = byId.get(x.sellerId);
-              const notSeller = seller && seller.role !== 'vendedor_clip' && seller.role !== 'vendedor_miclip';
-              return (
-                <li key={x.id} className="panel rounded-2xl p-3 text-sm">
-                  <p>
-                    <strong className="text-ink">{label(byId.get(x.merchantId))}</strong> sobre {label(seller)}:{' '}
-                    <strong className={x.convinced ? 'text-safe-ink' : 'text-alarm-ink'}>{x.convinced ? 'quedó convencido' : 'no quedó convencido'}</strong>
-                    {notSeller && <span className="ml-1 font-bold text-[var(--cc-threat)]">(¡no es vendedor{seller.role === 'phishing' ? ': es phishing' : ''}!)</span>}
-                  </p>
-                  <p className="mt-1 text-ink-dim">
-                    {SALE_CRITERIA.map((c) => `${x.criteria.includes(c.id) ? '✓' : '✗'} ${c.id}`).join('  ·  ')}
-                  </p>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
+          );
+        })}
+      </ul>
     </section>
   );
 }
@@ -443,6 +430,11 @@ function PistaRow({ p }: { p: Pista }) {
     <li className="panel rounded-2xl p-3 text-sm">
       <p className="font-bold text-ink">{p.texto}</p>
       <p className="mt-1">{p.respuesta}</p>
+      {LISTEN[p.id] && (
+        <p className="mt-1 text-xs">
+          💡 {SECTIONS.find((x) => x.id === LISTEN[p.id].seccion)?.titulo}: {LISTEN[p.id].escucha}
+        </p>
+      )}
       <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-ink-dim">
         {p.ref} <EstadoBadge estado={p.estado} />
       </p>

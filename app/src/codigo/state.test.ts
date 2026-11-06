@@ -110,28 +110,37 @@ describe('Código Clip: reglas', () => {
     let { st, tokens } = joined(['Ana', 'Beto', 'Caro']);
     st = S.setAuditor(st, 'id-0', true);
     const view = S.playerView(st, tokens[1])!;
-    expect(view.roster[0]).toEqual({ num: 1, auditor: true, wasPhishing: true });
+    expect(view.roster[0]).toEqual({ num: 1, name: 'Ana', auditor: true, wasPhishing: true });
     expect(view.roster[1].wasPhishing).toBeNull();
     st = S.rescue(st, tokens[0], 'BlitzPay 2012', 'r1', 0);
     expect(st.rescues[0].auditor).toBe(true);
   });
 
-  it('venta: solo el merchant decide, una vez por vendedor', () => {
-    let { st, tokens } = joined(['Ana', 'Beto', 'Caro']);
-    expect(() => S.sale(st, tokens[1], 3, [], true, 's', 0)).toThrow('no está abierta');
+  it('aliados: solo con la ronda abierta, sin elegirse, se puede cambiar y se califica por equipo al cerrar', () => {
+    // slots: 1 phishing (imita Venta), 2 merchant_fan, 3 vendedor_clip; tardíos: 4 vendedor_miclip, 5 persona_normal
+    let { st, tokens } = joined(['Ana', 'Beto', 'Caro', 'Dani', 'Eli']);
+    expect(() => S.allies(st, tokens[2], [4], 0)).toThrow('no está abierta');
     st = S.setSession(st, { saleOpen: true });
-    expect(() => S.sale(st, tokens[0], 3, [], true, 's', 0)).toThrow('Solo un merchant');
-    st = S.sale(st, tokens[1], 3, ['dato', 'inventado'], true, 's1', 0);
-    expect(st.sales[0].criteria).toEqual(['dato']);
-    expect(() => S.sale(st, tokens[1], 3, [], false, 's2', 0)).toThrow('Ya calificaste');
-    expect(S.playerView(st, tokens[1])!.judged).toEqual([3]);
+    expect(() => S.allies(st, tokens[2], [3], 0)).toThrow('No te elijas');
+    expect(() => S.allies(st, tokens[2], [9], 0)).toThrow('no existe');
+    st = S.allies(st, tokens[2], [1, 2], 0);
+    st = S.allies(st, tokens[2], [4, 2], 1); // Caro cambia de opinión
+    expect(st.allies).toHaveLength(1);
+    expect(S.playerView(st, tokens[2])!.myAllies).toEqual([4, 2]);
+    expect(S.playerView(st, tokens[2])!.allyScore).toBeNull(); // aún abierta
+    st = S.allies(st, tokens[4], [1], 2); // persona normal: sin equipo
+    st = S.setSession(st, { saleOpen: false });
+    expect(S.playerView(st, tokens[2])!.allyScore).toEqual({ right: 1, total: 2 }); // Dani sí (Venta), Beto no
+    expect(S.playerView(st, tokens[4])!.allyScore).toEqual({ right: 0, total: 1 });
+    expect(st.players.every((p) => p.life === 100)).toBe(true); // los aliados no mueven la vida
   });
 
-  it('la vista del celular no trae nombres ni roles ajenos', () => {
-    const { st, tokens } = joined(['Ana', 'Beto']);
-    const json = JSON.stringify(S.playerView(st, tokens[1]));
-    expect(json).not.toContain('Ana');
-    expect(json).not.toContain('phishing');
+  it('la vista del celular trae los nombres para votar, pero no roles ajenos', () => {
+    const { st, tokens } = joined(['Ana', 'Beto', 'Caro']);
+    const view = S.playerView(st, tokens[1])!;
+    expect(view.roster.map((r) => r.name)).toEqual(['Ana', 'Beto', 'Caro']);
+    expect(JSON.stringify(view.roster)).not.toMatch(/phishing"|vendedor|merchant/);
+    expect(JSON.stringify(view)).not.toContain('phishing');
   });
 
   it('cerrar borra a todos', () => {

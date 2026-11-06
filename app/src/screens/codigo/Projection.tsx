@@ -27,7 +27,7 @@ export function Projection({ code }: { code: string }) {
   const banner = s.voteOpen
     ? `🗳️ Votación abierta · ${board.voted} de ${board.players.length} votaron`
     : s.saleOpen
-      ? '🤝 Venta abierta: vendedores, convenzan a un merchant'
+      ? '🤝 Ronda de aliados: ¿quién es de tu equipo?'
       : s.roundOpen
         ? '💬 Ronda de preguntas: busca a quien comparta tus rasgos'
         : null;

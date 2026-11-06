@@ -1,4 +1,4 @@
-import { LIFE, MERCHANT_ROLES, MIN_PLAYERS, RESCUE_SECTIONS, SALE_CRITERIA, SECTIONS } from './content';
+import { LIFE, MIN_PLAYERS, RESCUE_SECTIONS, SECTIONS, allyTeam } from './content';
 import type {
   BoardView,
   CCPlayer,
@@ -36,7 +36,7 @@ export function createState(code: string): CCState {
     players: [],
     votes: [],
     rescues: [],
-    sales: [],
+    allies: [],
   };
 }
 
@@ -171,24 +171,30 @@ export function setAuditor(st: CCState, playerId: string, on: boolean): CCState 
   return bump({ ...st, players: st.players.map((p) => (p.id === playerId ? { ...p, auditor: on } : p)) });
 }
 
-export function sale(st: CCState, token: string, sellerNum: number, criteria: string[], convinced: boolean, id: string, now: number): CCState {
+export const MAX_ALLIES = 5;
+
+/** "¿Quién es de tu equipo?": picks can change while the round is open. */
+export function allies(st: CCState, token: string, nums: number[], now: number): CCState {
   open(st);
   const me = playerOf(st, token);
-  if (!st.session.saleOpen) throw new Error('La venta no está abierta');
-  if (!MERCHANT_ROLES.includes(me.role)) throw new Error('Solo un merchant decide la venta');
-  const seller = st.players.find((p) => p.num === sellerNum);
-  if (!seller || seller.id === me.id) throw new Error('Elige a quien te vendió');
-  if (st.sales.some((s) => s.merchantId === me.id && s.sellerId === seller.id)) throw new Error('Ya calificaste a esa persona');
-  const valid = criteria.filter((c) => SALE_CRITERIA.some((k) => k.id === c));
-  return bump({
-    ...st,
-    sales: [...st.sales, { id, merchantId: me.id, sellerId: seller.id, criteria: valid, convinced, at: now }],
-  });
+  if (!st.session.saleOpen) throw new Error('La ronda de aliados no está abierta');
+  const ids = [...new Set(nums)].map((n) => st.players.find((p) => p.num === n));
+  if (ids.some((p) => !p)) throw new Error('Ese jugador no existe');
+  if (ids.some((p) => p!.id === me.id)) throw new Error('No te elijas a ti');
+  if (ids.length > MAX_ALLIES) throw new Error(`Elige como máximo ${MAX_ALLIES}`);
+  const guess = { playerId: me.id, targetIds: ids.map((p) => p!.id), at: now };
+  return bump({ ...st, allies: [...st.allies.filter((g) => g.playerId !== me.id), guess] });
 }
 
-/** Closing erases everyone: names, roles, votes, rescues and sales. */
+/** Whether `a` picking `b` as an ally is right. */
+export const sameTeam = (a: CCPlayer, b: CCPlayer) => {
+  const t = allyTeam(a.role);
+  return t !== null && t === allyTeam(b.role);
+};
+
+/** Closing erases everyone: names, roles, votes, rescues and ally picks. */
 export function close(st: CCState): CCState {
-  return bump({ ...st, players: [], votes: [], rescues: [], sales: [], slots: [], overflow: [], session: { ...st.session, status: 'cerrada', voteOpen: false, roundOpen: false, saleOpen: false } });
+  return bump({ ...st, players: [], votes: [], rescues: [], allies: [], slots: [], overflow: [], session: { ...st.session, status: 'cerrada', voteOpen: false, roundOpen: false, saleOpen: false } });
 }
 
 export function playerView(st: CCState, token: string): PlayerView | null {
@@ -196,13 +202,16 @@ export function playerView(st: CCState, token: string): PlayerView | null {
   if (!me) return null;
   const round = st.session.voteRound;
   const mine = st.votes.find((v) => v.round === round && v.voterId === me.id);
+  const guess = st.allies.find((g) => g.playerId === me.id);
+  const picked = (guess?.targetIds ?? []).flatMap((id) => st.players.filter((p) => p.id === id));
   return {
     session: st.session,
     me,
-    roster: st.players.map((p) => ({ num: p.num, auditor: p.auditor, wasPhishing: p.auditor ? p.role === 'phishing' : null })),
+    roster: st.players.map((p) => ({ num: p.num, name: p.name, auditor: p.auditor, wasPhishing: p.auditor ? p.role === 'phishing' : null })),
     votedFor: mine ? (st.players.find((p) => p.id === mine.targetId)?.num ?? null) : null,
     rescues: st.rescues.filter((r) => r.playerId === me.id).map((r) => ({ section: r.section, auditor: r.auditor, status: r.status })),
-    judged: st.sales.filter((s) => s.merchantId === me.id).map((s) => st.players.find((p) => p.id === s.sellerId)?.num ?? 0),
+    myAllies: picked.map((p) => p.num),
+    allyScore: guess && !st.session.saleOpen ? { right: picked.filter((p) => sameTeam(me, p)).length, total: picked.length } : null,
   };
 }
 
@@ -217,5 +226,5 @@ export function boardView(st: CCState): BoardView {
 }
 
 export function hostView(st: CCState): HostView {
-  return { session: st.session, players: st.players, votes: st.votes, rescues: st.rescues, sales: st.sales };
+  return { session: st.session, players: st.players, votes: st.votes, rescues: st.rescues, allies: st.allies };
 }
